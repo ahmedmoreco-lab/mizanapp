@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "301285629180",
+    "project_id": "soulpongfresh",
+    "storage_bucket": "soulpongfresh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301285629180:android:f59def8fb213006afa0b79",
+        "android_client_info": {
+          "package_name": "com.android.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcL5JVGrf6MXpw1EfZ6sdS3pACMWlMSf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
