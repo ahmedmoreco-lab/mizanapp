@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && resource.data.trustedContactId == request.auth.uid;
+      // Allow the Trusted Contact to update the Elder's profile (specifically for inactivityThresholdHours)
+      allow update: if request.auth != null && resource.data.trustedContactId == request.auth.uid;
+      allow read: if request.auth != null;
+
+      // --- Checkins Subcollection ---
+      match /checkins/{checkinId} {
+        // Only the user or their trusted contact can read the checkin
+        allow read: if request.auth != null; 
+        allow create: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

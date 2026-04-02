@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/elder_provider.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
+import '../utils/theme.dart';
 
 class SetContactScreen extends StatefulWidget {
   const SetContactScreen({super.key});
@@ -10,161 +14,104 @@ class SetContactScreen extends StatefulWidget {
 }
 
 class _SetContactScreenState extends State<SetContactScreen> {
-  final TextEditingController emailController = TextEditingController();
-
-  bool isLoading = false;
-  String message = "";
-
-  // 🔥 MAIN FUNCTION (FULL FLOW)
-  Future<void> linkTrustedContact() async {
-    final email = emailController.text.trim();
-
-    // ✅ Validate input
-    if (email.isEmpty) {
-      setState(() => message = "⚠️ Please enter an email");
-      return;
-    }
-
-    try {
-      setState(() {
-        isLoading = true;
-        message = "";
-      });
-
-      // 👤 Get current elder
-      final currentUser = FirebaseAuth.instance.currentUser;
-
-      if (currentUser == null) {
-        setState(() => message = "❌ User not logged in");
-        return;
-      }
-
-      final elderId = currentUser.uid;
-
-      // 🔍 Search for contact by email
-      final query = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .get();
-
-      if (query.docs.isEmpty) {
-        setState(() => message = "❌ No user found with this email");
-        return;
-      }
-
-      // ✅ Get contact data
-      final contactDoc = query.docs.first;
-      final contactId = contactDoc.id;
-      final contactData = contactDoc.data();
-
-      // 🚫 Prevent linking yourself
-      if (contactId == elderId) {
-        setState(() => message = "⚠️ You cannot link yourself");
-        return;
-      }
-
-      // 🚫 Ensure it's a contact account
-      if (contactData['role'] != 'contact') {
-        setState(() => message = "⚠️ This user is not a trusted contact");
-        return;
-      }
-
-      // 🔗 Save link in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(elderId)
-          .update({
-        'trustedContactId': contactId,
-      });
-
-      setState(() {
-        message = "✅ Trusted contact linked successfully!";
-      });
-
-      // 🚀 Navigate after success
-      Future.delayed(const Duration(seconds: 1), () {
-        if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/ElderHomeScreen');
-      });
-
-    } catch (e) {
-      setState(() => message = "❌ Error: $e");
-    } finally {
-      setState(() => isLoading = false);
-    }
-  }
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void dispose() {
-    emailController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
-  // 🎨 UI
+  void _showMessage(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _linkContact() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showMessage("Please enter an email");
+      return;
+    }
+
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    final elderUid = authProvider.userModel?.uid;
+    
+    if (elderUid == null) return;
+
+    try {
+      await Provider.of<ElderProvider>(context, listen: false).linkContact(elderUid, email);
+      _showMessage('Trusted Contact Linked Successfully!');
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      _showMessage(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLoading = context.watch<ElderProvider>().isLoading;
+    final user = context.watch<AppAuthProvider>().userModel;
+    final hasContact = user?.trustedContactId != null;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Set Trusted Contact"),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.person_add_alt_1,
-                size: 80, color: Colors.blue),
-
-            const SizedBox(height: 20),
-
-            const Text(
-              "Enter Trusted Contact Email",
-              style: TextStyle(fontSize: 18),
-            ),
-
-            const SizedBox(height: 20),
-
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: "Email",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      appBar: AppBar(title: const Text('Trusted Contact')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Link a Trusted Contact',
+                style: Theme.of(context).textTheme.displayMedium,
               ),
-            ),
-
-            const SizedBox(height: 20),
-
-            isLoading
-                ? const CircularProgressIndicator()
-                : SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: linkTrustedContact,
-                      child: const Text(
-                        "Link Contact",
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    ),
+              const SizedBox(height: 12),
+              Text(
+                'Enter the email address of the person who will be notified about your safety status.',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 32),
+              
+              if (hasContact)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.statusSafe.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.statusSafe),
                   ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: AppTheme.statusSafe),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "You already have a linked contact. Linking a new one will replace the current one.",
+                          style: TextStyle(color: AppTheme.statusSafe, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-            const SizedBox(height: 20),
-
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                color: message.contains("✅")
-                    ? Colors.green
-                    : Colors.red,
+              CustomTextField(
+                controller: _emailController,
+                labelText: "Contact Email",
+                hintText: "e.g. child@example.com",
+                prefixIcon: Icons.email_rounded,
+                keyboardType: TextInputType.emailAddress,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 32),
+              CustomButton(
+                text: hasContact ? "Update Contact" : "Link Contact",
+                onPressed: _linkContact,
+                isLoading: isLoading,
+              ),
+            ],
+          ),
         ),
       ),
     );

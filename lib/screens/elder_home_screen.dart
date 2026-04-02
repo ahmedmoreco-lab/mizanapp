@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_application_1/screens/set_contact_screen.dart';
-import '../services/checkin_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/elder_provider.dart';
+import '../services/firestore_service.dart';
+import '../models/checkin_model.dart';
+import '../widgets/custom_button.dart';
+import '../utils/theme.dart';
+import 'set_contact_screen.dart';
+import 'package:intl/intl.dart';
 
 class ElderHomeScreen extends StatefulWidget {
   const ElderHomeScreen({super.key});
@@ -11,167 +17,203 @@ class ElderHomeScreen extends StatefulWidget {
 }
 
 class _ElderHomeScreenState extends State<ElderHomeScreen> {
-  final CheckInService service = CheckInService();
+  final FirestoreService _firestoreService = FirestoreService();
 
-  String? lastCheckIn;
-  bool isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    loadLastCheckIn();
-  }
-
-  // 🔹 Load last check-in from service
-  Future<void> loadLastCheckIn() async {
-    try {
-      final result = await service.getLastCheckIn();
-
-      if (!mounted) return;
-
-      setState(() {
-        lastCheckIn =
-            result != null ? result.toDate().toLocal().toString() : "No check-in yet";
-      });
-    } catch (e) {
-      showMessage("Error loading data: $e");
-    }
-  }
-
-  // 🔹 Record new check-in
-  Future<void> recordCheckIn() async {
-    setState(() => isLoading = true);
-
-    try {
-      await service.recordCheckIn();
-
-      final result = await service.getLastCheckIn();
-
-      if (!mounted) return;
-
-      setState(() {
-        lastCheckIn = result?.toDate().toLocal().toString();
-      });
-
-      showMessage("✅ Check-in recorded!");
-    } catch (e) {
-      showMessage("❌ Error: $e");
-    }
-
-    setState(() => isLoading = false);
-  }
-
-  // 🔹 Run inactivity check
-  Future<void> runSafetyCheck() async {
-    try {
-      final result = await service.getLastCheckIn();
-
-      if (result == null) {
-        showMessage("No check-in data available.");
-        return;
-      }
-
-      final inactive = service.isInactive(result);
-
-      showMessage(
-        inactive
-            ? "⚠ You missed your check-in!"
-            : "✅ You are safe",
-      );
-    } catch (e) {
-      showMessage("Error: $e");
-    }
-  }
-
-  // 🔹 Snackbar helper
-  void showMessage(String message) {
+  void _showMessage(String text) {
     if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  // 🔹 UI
+  Future<void> _handleCheckIn(String uid, {bool isEmergency = false}) async {
+    try {
+      await Provider.of<ElderProvider>(context, listen: false).checkIn(uid, isEmergency: isEmergency);
+      _showMessage(isEmergency ? 'Emergency Alert Sent!' : 'Check-in successful!');
+    } catch (e) {
+      _showMessage('Error: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AppAuthProvider>(context);
+    final user = authProvider.userModel;
+
+    if (user == null) return const Scaffold(body: Center(child: Text("Loading...")));
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("SoulPing Care"),
-        centerTitle: true,
+        title: const Text('My Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => authProvider.signOut(),
+            tooltip: 'Logout',
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 🧓 Title
-            const Text(
-              "Daily Check-In",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 30),
-
-            // 📅 Last Check-In
-            Text(
-              "Last Check-In:",
-              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              lastCheckIn ?? "Loading...",
-              style: const TextStyle(fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 40),
-
-            // ✅ Check-In Button
-            isLoading
-                ? const CircularProgressIndicator()
-                : SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton(
-                      onPressed: recordCheckIn,
-                      child: const Text(
-                        "I’m OK",
-                        style: TextStyle(fontSize: 18),
-                      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Hi ${user.name != null && user.name!.isNotEmpty ? user.name : user.email.split('@')[0]}',
+                style: Theme.of(context).textTheme.displayLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              // Prominent Trusted Contact Widget
+              Card(
+                color: user.trustedContactId == null ? AppTheme.statusAlert.withOpacity(0.1) : AppTheme.primary.withOpacity(0.05),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: user.trustedContactId == null ? AppTheme.statusAlert : AppTheme.primary.withOpacity(0.3), width: 2),
+                ),
+                child: InkWell(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SetContactScreen())),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.contact_phone_rounded, size: 40, color: user.trustedContactId == null ? AppTheme.statusAlert : AppTheme.primary),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Trusted Contact",
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                              ),
+                              Text(
+                                user.trustedContactId == null ? "Tap to setup immediately!" : "Tap to view or change",
+                                style: TextStyle(fontSize: 14, color: AppTheme.textMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.textMuted),
+                      ],
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-            const SizedBox(height: 20),
+              // Status Card with Stream
+              StreamBuilder<CheckinModel?>(
+                stream: _firestoreService.streamLastCheckin(user.uid),
+                builder: (context, snapshot) {
+                  final checkin = snapshot.data;
+                  final hasCheckedIn = checkin != null;
+                  
+                  String statusText = "No check-in yet";
+                  Color statusColor = AppTheme.statusNeutral;
+                  IconData statusIcon = Icons.help_outline_rounded;
 
-            // 🔍 Safety Check Button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SetContactScreen(),
+                  if (hasCheckedIn) {
+                    final timePassed = DateTime.now().difference(checkin.timestamp);
+                    if (timePassed.inHours < user.inactivityThresholdHours) {
+                      statusColor = AppTheme.statusSafe;
+                      statusText = "You are marked SAFE";
+                      statusIcon = Icons.check_circle_rounded;
+                    } else {
+                      statusColor = AppTheme.statusAlert;
+                      statusText = "Missed Check-in (>${user.inactivityThresholdHours}h)";
+                      statusIcon = Icons.error_rounded;
+                    }
+                  }
+
+                  return Card(
+                    color: statusColor.withOpacity(0.1),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: BorderSide(color: statusColor, width: 2),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        children: [
+                          Icon(statusIcon, size: 64, color: statusColor),
+                          const SizedBox(height: 16),
+                          Text(statusText, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: statusColor)),
+                          if (hasCheckedIn) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              "Last: ${DateFormat.yMMMd().add_jm().format(checkin.timestamp)}",
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   );
                 },
-                child: const Text("Set Trusted Contact"),
               ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: runSafetyCheck,
-                child: const Text(
-                  "Run Safety Check",
-                  style: TextStyle(fontSize: 16),
-                ),
+
+              const Spacer(),
+              
+              // Big Check In Button
+              Consumer<ElderProvider>(
+                builder: (context, elderProvider, child) {
+                  return Column(
+                    children: [
+                      SizedBox(
+                        height: 70,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          onPressed: elderProvider.isLoading ? null : () => _handleCheckIn(user.uid),
+                          child: elderProvider.isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.waving_hand_rounded, size: 28),
+                                    SizedBox(width: 16),
+                                    Text("I'm OK", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Huge Emergency Button
+                      SizedBox(
+                        height: 70,
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.statusAlert,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          onPressed: elderProvider.isLoading ? null : () => _handleCheckIn(user.uid, isEmergency: true),
+                          child: elderProvider.isLoading
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.warning_rounded, size: 28),
+                                    SizedBox(width: 16),
+                                    Text("EMERGENCY SOS", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

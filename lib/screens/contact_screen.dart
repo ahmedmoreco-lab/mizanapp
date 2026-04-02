@@ -9,84 +9,97 @@ class ContactHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser!;
 
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Elder Monitoring"),
+        centerTitle: true,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('trustedContactId', isEqualTo: currentUser.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        final data = snapshot.data!.data() as Map<String, dynamic>;
-        final elderId = data['linkedElderId'];
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text("No linked elder found"),
+            );
+          }
 
-        if (elderId == null) {
-          return const Scaffold(
-            body: Center(child: Text("No elder linked yet")),
-          );
-        }
+          final elderDoc = snapshot.data!.docs.first;
+          final elderData = elderDoc.data() as Map<String, dynamic>;
 
-        return StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(elderId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
+          return FutureBuilder<QuerySnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('checkins')
+                .where('userId', isEqualTo: elderDoc.id)
+                .orderBy('timestamp', descending: true)
+                .limit(1)
+                .get(),
+            builder: (context, checkinSnapshot) {
+              if (checkinSnapshot.connectionState ==
+                  ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            final elderData =
-                snapshot.data!.data() as Map<String, dynamic>;
+              String status = "No check-ins yet";
+              Color statusColor = Colors.grey;
 
-            final lastCheck = elderData['lastCheckIn'];
+              if (checkinSnapshot.hasData &&
+                  checkinSnapshot.data!.docs.isNotEmpty) {
+                final checkin = checkinSnapshot.data!.docs.first;
+                final timestamp = checkin['timestamp'];
 
-            bool isSafe = true;
+                if (timestamp != null) {
+                  final lastCheck =
+                      (timestamp as Timestamp).toDate();
+                  final difference =
+                      DateTime.now().difference(lastCheck).inHours;
 
-            if (lastCheck != null) {
-              final lastTime = lastCheck.toDate();
-              final diff = DateTime.now().difference(lastTime);
+                  if (difference <= 24) {
+                    status = "✅ SAFE";
+                    statusColor = Colors.green;
+                  } else {
+                    status = "🚨 ALERT (Missed check-in)";
+                    statusColor = Colors.red;
+                  }
+                }
+              }
 
-              isSafe = diff.inHours < 24;
-            }
-
-            return Scaffold(
-              appBar: AppBar(title: const Text("Monitoring Dashboard")),
-              body: Padding(
+              return Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
+                    const Icon(Icons.person, size: 80),
+
+                    const SizedBox(height: 20),
+
                     Text(
-                      isSafe ? "🟢 Elder is Safe" : "🔴 Missed Check-In!",
+                      "Elder Email: ${elderData['email']}",
+                      style: const TextStyle(fontSize: 16),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Text(
+                      status,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isSafe ? Colors.green : Colors.red,
+                        color: statusColor,
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      "Last Check-In:",
-                      style: TextStyle(color: Colors.grey[700]),
-                    ),
-                    Text(
-                      lastCheck != null
-                          ? lastCheck.toDate().toString()
-                          : "No data",
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/custom_textfield.dart';
+import '../utils/theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,8 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  bool loading = false;
-
   @override
   void dispose() {
     emailController.dispose();
@@ -22,46 +24,36 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> loginUser() async {
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
       _showMessage('Please enter both email and password.');
       return;
     }
 
-    setState(() => loading = true);
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-
+      await authProvider.login(email, password);
       if (!mounted) return;
-
-      Navigator.pushReplacementNamed(context, '/home');
-    } on FirebaseAuthException catch (e) {
+      // AuthProvider changes state -> main.dart's wrapper reads it -> sends to RoleChecker
+    } catch (e) {
       if (!mounted) return;
-      _showMessage(e.message ?? 'Login failed');
-    } finally {
-      if (mounted) {
-        setState(() => loading = false);
-      }
+      _showMessage(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-final user = FirebaseAuth.instance.currentUser;
-print("🔥 Current User: ${user?.uid}");
+    final isLoading = context.watch<AppAuthProvider>().isLoading;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Welcome')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -70,65 +62,48 @@ print("🔥 Current User: ${user?.uid}");
               constraints: const BoxConstraints(maxWidth: 520),
               child: Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(32),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       CircleAvatar(
-                        radius: 42,
-                        backgroundColor:
-                            theme.colorScheme.secondary.withValues(alpha: 0.22),
-                        child: Icon(
-                          Icons.favorite_rounded,
-                          size: 42,
-                          color: theme.colorScheme.primary,
-                        ),
+                        radius: 46,
+                        backgroundColor: AppTheme.secondary.withOpacity(0.2),
+                        child: const Icon(Icons.favorite_rounded, size: 46, color: AppTheme.primary),
                       ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'SoulPing Care',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineLarge,
-                      ),
+                      const SizedBox(height: 24),
+                      Text('SoulPing Care', style: theme.textTheme.displayMedium),
                       const SizedBox(height: 12),
                       Text(
-                        'Sign in to check in safely and stay connected with the people who care about you.',
+                        'Welcome back. Please sign in to continue.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyLarge,
                       ),
-                      const SizedBox(height: 28),
-                      TextField(
+                      const SizedBox(height: 32),
+                      CustomTextField(
                         controller: emailController,
+                        labelText: 'Email',
+                        hintText: 'Enter your email',
+                        prefixIcon: Icons.mail_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          hintText: 'Enter your email address',
-                          prefixIcon: Icon(Icons.mail_outline_rounded),
-                        ),
                       ),
-                      const SizedBox(height: 18),
-                      TextField(
+                      const SizedBox(height: 20),
+                      CustomTextField(
                         controller: passwordController,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
-                          prefixIcon: Icon(Icons.lock_outline_rounded),
-                        ),
+                        labelText: 'Password',
+                        hintText: 'Enter your password',
+                        prefixIcon: Icons.lock_outline_rounded,
                         obscureText: true,
                       ),
-                      const SizedBox(height: 24),
-                      loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : ElevatedButton(
-                              onPressed: loginUser,
-                              child: const Text('Sign In'),
-                            ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 32),
+                      CustomButton(
+                        text: 'Sign In',
+                        onPressed: loginUser,
+                        isLoading: isLoading,
+                      ),
+                      const SizedBox(height: 16),
                       TextButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/signup');
-                        },
-                        child: const Text('Need an account? Create one'),
+                        onPressed: () => Navigator.pushNamed(context, '/signup'),
+                        child: const Text('Need an account? Create one', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primary)),
                       ),
                     ],
                   ),

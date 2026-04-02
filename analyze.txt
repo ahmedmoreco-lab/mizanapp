@@ -1,0 +1,21 @@
+Analyzing soulping_care-main...                                 
+
+   info - Don't invoke 'print' in production code - lib\main.dart:22:3 - avoid_print
+warning - Unused import: '../../utils/theme.dart' - lib\screens\auth\signup_screen.dart:6:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\contact_home_screen.dart:55:91 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\contact_home_screen.dart:145:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\contact_home_screen.dart:161:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\contact_home_screen.dart:163:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\contact_home_screen.dart:186:62 - deprecated_member_use
+warning - Unused import: '../widgets/custom_button.dart' - lib\screens\elder_home_screen.dart:7:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\elder_home_screen.dart:77:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\elder_home_screen.dart:88:72 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\elder_home_screen.dart:125:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\login_screen.dart:70:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\screens\set_contact_screen.dart:82:48 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:15:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:17:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:22:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\notification_service.dart:26:7 - avoid_print
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\utils\theme.dart:95:35 - deprecated_member_use
+
