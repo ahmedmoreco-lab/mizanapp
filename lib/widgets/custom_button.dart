@@ -3,7 +3,7 @@ import '../../utils/theme.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool isLoading;
   final Color? color;
   final bool isOutlined;

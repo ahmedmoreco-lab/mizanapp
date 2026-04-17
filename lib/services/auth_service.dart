@@ -21,7 +21,7 @@ class AuthService {
       return null;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        throw Exception('This account does not exist or wrong password.');
+        throw Exception('Wrong email or password, or the email address does not exist.');
       } else if (e.code == 'invalid-email') {
         throw Exception('The email address is badly formatted.');
       }
@@ -31,7 +31,7 @@ class AuthService {
     }
   }
 
-  Future<UserModel?> signup(String email, String password, String role, String name) async {
+  Future<UserModel?> signup(String email, String password, String role, String name, {bool startPremium = false}) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -44,6 +44,7 @@ class AuthService {
           email: email,
           role: role,
           name: name,
+          isPremium: startPremium,
         );
 
         await _firestoreService.createUser(userModel);

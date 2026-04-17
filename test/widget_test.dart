@@ -8,7 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_application_1/main.dart';
+import 'package:soulping_care/main.dart';
 
 void main() {
   testWidgets('App shows the login screen', (WidgetTester tester) async {

@@ -6,6 +6,7 @@ import '../services/firestore_service.dart';
 import '../models/user_model.dart';
 import '../models/checkin_model.dart';
 import '../utils/theme.dart';
+import 'auth/account_settings_screen.dart';
 import 'package:intl/intl.dart';
 
 class ContactHomeScreen extends StatefulWidget {
@@ -29,6 +30,11 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
       appBar: AppBar(
         title: const Text('Monitoring Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Account Settings',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.signOut(),
@@ -106,9 +112,15 @@ class _ElderStatusCard extends StatelessWidget {
           actions: [
             for (final hours in [4, 8, 12, 24, 48])
               TextButton(
-                onPressed: () {
-                  firestoreService.updateInactivityThreshold(elder.uid, hours);
-                  Navigator.pop(context);
+                onPressed: () async {
+                  try {
+                    await firestoreService.updateInactivityThreshold(elder.uid, hours);
+                    if (context.mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    }
+                  }
                 },
                 child: Text(
                   "${hours}h",
@@ -193,7 +205,7 @@ class _ElderStatusCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Container(
+                      Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.1),
@@ -229,6 +241,47 @@ class _ElderStatusCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    StreamBuilder<List<CheckinModel>>(
+                      stream: firestoreService.streamWeeklyCheckins(elder.uid),
+                      builder: (context, insightSnap) {
+                        if (!insightSnap.hasData) return const SizedBox.shrink();
+                        final weeklyCheckins = insightSnap.data!;
+                        
+                        // Simple stats logic
+                        final daysWithCheckin = weeklyCheckins.fold<Set<String>>({}, (set, checkin) {
+                          set.add(DateFormat('yyyy-MM-dd').format(checkin.timestamp));
+                          return set;
+                        }).length;
+
+                        final safeDays = daysWithCheckin > 7 ? 7 : daysWithCheckin;
+                        final missedDays = 7 - safeDays;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Weekly Safety Insights",
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.analytics_rounded, size: 20, color: AppTheme.primary),
+                                const SizedBox(width: 8),
+                                Text("Last 7 days: $safeDays/7 safe", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                if (missedDays > 0) ...[
+                                  const SizedBox(width: 12),
+                                  Text("• Missed $missedDays days", style: const TextStyle(color: AppTheme.statusAlert, fontWeight: FontWeight.bold))
+                                ],
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

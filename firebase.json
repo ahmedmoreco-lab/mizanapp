@@ -3,14 +3,14 @@
     "platforms": {
       "android": {
         "default": {
-          "projectId": "soulpingcare-89ba7",
+          "projectId": "soulpongfresh",
           "appId": "1:1068920649962:android:439fcfb9879d8400057f93",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "soulpingcare-89ba7",
+          "projectId": "soulpongfresh",
           "configurations": {
             "android": "1:1068920649962:android:439fcfb9879d8400057f93",
             "ios": "1:1068920649962:ios:a9721a0ed56a2ca2057f93",
@@ -21,6 +21,9 @@
         }
       }
     }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   },
   "functions": [
     {

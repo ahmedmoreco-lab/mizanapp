@@ -1,21 +1,49 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Users Collection ---
+
+    // ─────────────────────────────────────────────────────
+    // USERS COLLECTION
+    // ─────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && resource.data.trustedContactId == request.auth.uid;
-      // Allow the Trusted Contact to update the Elder's profile (specifically for inactivityThresholdHours)
-      allow update: if request.auth != null && resource.data.trustedContactId == request.auth.uid;
+
+      // Elder or Contact can read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Any authenticated user can read another user's profile
+      // (needed for email lookups when linking contacts)
       allow read: if request.auth != null;
 
-      // --- Checkins Subcollection ---
+      // Owner can fully update their own document
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // A trusted contact can update the elder's inactivityThresholdHours ONLY
+      // (prevents contacts from taking over the entire document)
+      allow update: if request.auth != null
+        && resource.data.trustedContacts.hasAny([request.auth.uid])
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['inactivityThresholdHours']);
+
+      // ─── Checkins Subcollection ───
       match /checkins/{checkinId} {
-        // Only the user or their trusted contact can read the checkin
-        allow read: if request.auth != null; 
-        allow create: if request.auth != null && request.auth.uid == userId;
+        // Elder can write their own check-ins
+        allow write: if request.auth != null && request.auth.uid == userId;
+
+        // Any authenticated user can read (contacts viewing elder status)
+        allow read: if request.auth != null;
       }
+    }
+
+    // ─────────────────────────────────────────────────────
+    // ALERTS COLLECTION (written only by Cloud Functions / admin SDK)
+    // ─────────────────────────────────────────────────────
+    match /alerts/{alertId} {
+      // Contacts can read alerts directed at them
+      allow read: if request.auth != null
+        && resource.data.contactId == request.auth.uid;
+
+      // No client writes — only Firebase Admin SDK (Cloud Functions) writes here
+      allow write: if false;
     }
   }
 }

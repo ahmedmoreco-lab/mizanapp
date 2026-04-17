@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../utils/theme.dart';
+import 'auth/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,8 +25,28 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Login Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
+
+  bool _isLoading = false;
 
   Future<void> loginUser() async {
     final email = emailController.text.trim();
@@ -38,6 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       await authProvider.login(email, password);
       if (!mounted) return;
@@ -45,13 +70,18 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLoading = context.watch<AppAuthProvider>().isLoading;
 
     return Scaffold(
       body: SafeArea(
@@ -98,9 +128,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       CustomButton(
                         text: 'Sign In',
                         onPressed: loginUser,
-                        isLoading: isLoading,
+                        isLoading: _isLoading,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                        ),
+                        child: const Text('Forgot Password?', style: TextStyle(fontSize: 15, color: AppTheme.textMuted)),
+                      ),
+                      const SizedBox(height: 4),
                       TextButton(
                         onPressed: () => Navigator.pushNamed(context, '/signup'),
                         child: const Text('Need an account? Create one', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primary)),

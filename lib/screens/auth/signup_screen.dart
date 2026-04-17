@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
-import '../../utils/theme.dart';
 import '../../utils/constants.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,6 +17,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String _selectedRole = AppConstants.roleElder;
+  bool _startPremium = false;
 
   @override
   void dispose() {
@@ -27,8 +27,28 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  bool _isLoading = false;
+
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Error'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> signupUser() async {
@@ -43,20 +63,29 @@ class _SignupScreenState extends State<SignupScreen> {
 
     final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      await authProvider.signup(email, password, _selectedRole, name);
+      await authProvider.signup(email, password, _selectedRole, name, startPremium: _startPremium);
       if (!mounted) return;
       Navigator.pop(context); // Go back to login/home
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLoading = context.watch<AppAuthProvider>().isLoading;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Create Account')),
@@ -111,11 +140,30 @@ class _SignupScreenState extends State<SignupScreen> {
                           });
                         },
                       ),
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: CheckboxListTile(
+                          title: const Text('Start with Premium (\$2.99/mo)', style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text('Unlock multiple contacts and smart escalation alerts.'),
+                          value: _startPremium,
+                          activeColor: Colors.amber.shade700,
+                          onChanged: (val) {
+                            setState(() {
+                              _startPremium = val ?? false;
+                            });
+                          },
+                        ),
+                      ),
                       const SizedBox(height: 32),
                       CustomButton(
                         text: 'Sign Up',
                         onPressed: signupUser,
-                        isLoading: isLoading,
+                        isLoading: _isLoading,
                       ),
                     ],
                   ),

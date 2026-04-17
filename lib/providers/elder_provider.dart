@@ -29,6 +29,17 @@ class ElderProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> removeContact(String elderUid, String contactId) async {
+    _setLoading(true);
+    try {
+      await _firestoreService.removeContact(elderUid, contactId);
+    } catch (e) {
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
