@@ -41,46 +41,48 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCCCa3_aXkwLu8ySWvuilwPnKFjrQFh67Y',
-    appId: '1:301285629180:web:2109e3cd3f0f66f9fa0b79',
-    messagingSenderId: '301285629180',
-    projectId: 'soulpongfresh',
-    authDomain: 'soulpongfresh.firebaseapp.com',
-    storageBucket: 'soulpongfresh.firebasestorage.app',
+    apiKey: 'AIzaSyBI_VfD6pnS_TtKJUKDAvLDxzw3kR8fmmM',
+    appId: '1:1068920649962:web:9ff0a3db881176ae057f93',
+    messagingSenderId: '1068920649962',
+    projectId: 'soulpingcare-89ba7',
+    authDomain: 'soulpingcare-89ba7.firebaseapp.com',
+    storageBucket: 'soulpingcare-89ba7.firebasestorage.app',
+    measurementId: 'G-MWPN4G3X34',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDcL5JVGrf6MXpw1EfZ6sdS3pACMWlMSf0',
-    appId: '1:301285629180:android:f59def8fb213006afa0b79',
-    messagingSenderId: '301285629180',
-    projectId: 'soulpongfresh',
-    storageBucket: 'soulpongfresh.firebasestorage.app',
+    apiKey: 'AIzaSyD_QmDfX6f0WnJ4cKnHNAXNYSlRFkR79ck',
+    appId: '1:1068920649962:android:439fcfb9879d8400057f93',
+    messagingSenderId: '1068920649962',
+    projectId: 'soulpingcare-89ba7',
+    storageBucket: 'soulpingcare-89ba7.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyANJQWjC-ZT2MhvqFRSN-XE__V7ySJATAc',
-    appId: '1:301285629180:ios:72e05447a0115aebfa0b79',
-    messagingSenderId: '301285629180',
-    projectId: 'soulpongfresh',
-    storageBucket: 'soulpongfresh.firebasestorage.app',
-    iosBundleId: 'com.example.flutterapplication1',
+    apiKey: 'AIzaSyCzM2uELfL5yJrnvPzUza-ecUXNFD_qGzQ',
+    appId: '1:1068920649962:ios:a9721a0ed56a2ca2057f93',
+    messagingSenderId: '1068920649962',
+    projectId: 'soulpingcare-89ba7',
+    storageBucket: 'soulpingcare-89ba7.firebasestorage.app',
+    iosBundleId: 'com.example.flutterApplication1',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyANJQWjC-ZT2MhvqFRSN-XE__V7ySJATAc',
-    appId: '1:301285629180:ios:72e05447a0115aebfa0b79',
-    messagingSenderId: '301285629180',
-    projectId: 'soulpongfresh',
-    storageBucket: 'soulpongfresh.firebasestorage.app',
-    iosBundleId: 'com.example.flutterapplication1',
+    apiKey: 'AIzaSyCzM2uELfL5yJrnvPzUza-ecUXNFD_qGzQ',
+    appId: '1:1068920649962:ios:a9721a0ed56a2ca2057f93',
+    messagingSenderId: '1068920649962',
+    projectId: 'soulpingcare-89ba7',
+    storageBucket: 'soulpingcare-89ba7.firebasestorage.app',
+    iosBundleId: 'com.example.flutterApplication1',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCCCa3_aXkwLu8ySWvuilwPnKFjrQFh67Y',
-    appId: '1:301285629180:web:2109e3cd3f0f66f9fa0b79',
-    messagingSenderId: '301285629180',
-    projectId: 'soulpongfresh',
-    authDomain: 'soulpongfresh.firebaseapp.com',
-    storageBucket: 'soulpongfresh.firebasestorage.app',
+    apiKey: 'AIzaSyBI_VfD6pnS_TtKJUKDAvLDxzw3kR8fmmM',
+    appId: '1:1068920649962:web:78942ec44ad29787057f93',
+    messagingSenderId: '1068920649962',
+    projectId: 'soulpingcare-89ba7',
+    authDomain: 'soulpingcare-89ba7.firebaseapp.com',
+    storageBucket: 'soulpingcare-89ba7.firebasestorage.app',
+    measurementId: 'G-83W54W1JGS',
   );
 }
