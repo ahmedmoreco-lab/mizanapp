@@ -33,7 +33,10 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Account Settings',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -44,7 +47,8 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
       ),
       body: SafeArea(
         child: StreamBuilder<List<UserModel>>(
-          stream: Provider.of<ContactProvider>(context, listen: false).streamLinkedElders(user.uid),
+          stream: Provider.of<ContactProvider>(context, listen: false)
+              .streamLinkedElders(user.uid),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -58,12 +62,20 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_alt_outlined, size: 80, color: AppTheme.textMuted.withOpacity(0.5)),
+                      Icon(
+                        Icons.people_alt_outlined,
+                        size: 80,
+                        color: AppTheme.textMuted.withValues(alpha: 0.5),
+                      ),
                       const SizedBox(height: 24),
-                      Text("No Elders Linked", style: Theme.of(context).textTheme.displayLarge),
+                      Text(
+                        "No Elders Linked",
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                       const SizedBox(height: 16),
                       Text(
-                        "Hi ${user.name != null && user.name!.isNotEmpty ? user.name : user.email.split('@')[0]},\nan elder must add your email ('${user.email}') in their app to link their account to yours.",
+                        "Hi ${user.name != null && user.name!.isNotEmpty ? user.name : user.email.split('@')[0]},\n"
+                        "an elder must add your email ('${user.email}') in their app to link their account to yours.",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
@@ -74,15 +86,16 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
             }
 
             return RefreshIndicator(
-              onRefresh: () async {
-                setState(() {}); // Re-trigger stream builder UI
-              },
+              onRefresh: () async => setState(() {}),
               child: ListView.builder(
                 padding: const EdgeInsets.all(24),
                 itemCount: elders.length,
                 itemBuilder: (context, index) {
                   final elder = elders[index];
-                  return _ElderStatusCard(elder: elder, firestoreService: _firestoreService);
+                  return _ElderStatusCard(
+                    elder: elder,
+                    firestoreService: _firestoreService,
+                  );
                 },
               ),
             );
@@ -102,37 +115,44 @@ class _ElderStatusCard extends StatelessWidget {
     required this.firestoreService,
   });
 
-  void _showThresholdDialog(BuildContext context, UserModel elder) {
+  void _showThresholdDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Set Alarm Threshold"),
-          content: Text("Alert me if ${elder.name ?? 'this elder'} misses a check-in for more than:"),
-          actions: [
-            for (final hours in [4, 8, 12, 24, 48])
-              TextButton(
-                onPressed: () async {
-                  try {
-                    await firestoreService.updateInactivityThreshold(elder.uid, hours);
-                    if (context.mounted) Navigator.pop(context);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                    }
+      builder: (ctx) => AlertDialog(
+        title: const Text("Set Alert Threshold"),
+        content: Text(
+          "Alert me if ${elder.name ?? 'this elder'} misses a check-in for more than:",
+        ),
+        actions: [
+          for (final hours in [4, 8, 12, 24, 48])
+            TextButton(
+              onPressed: () async {
+                try {
+                  await firestoreService.updateInactivityThreshold(
+                      elder.uid, hours);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  if (ctx.mounted) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
                   }
-                },
-                child: Text(
-                  "${hours}h",
-                  style: TextStyle(
-                    fontWeight: elder.inactivityThresholdHours == hours ? FontWeight.bold : FontWeight.normal,
-                    color: elder.inactivityThresholdHours == hours ? AppTheme.primary : AppTheme.textMuted,
-                  ),
+                }
+              },
+              child: Text(
+                "${hours}h",
+                style: TextStyle(
+                  fontWeight: elder.inactivityThresholdHours == hours
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: elder.inactivityThresholdHours == hours
+                      ? AppTheme.primary
+                      : AppTheme.textMuted,
                 ),
               ),
-          ],
-        );
-      },
+            ),
+        ],
+      ),
     );
   }
 
@@ -142,7 +162,7 @@ class _ElderStatusCard extends StatelessWidget {
       stream: firestoreService.streamLastCheckin(elder.uid),
       builder: (context, snapshot) {
         final checkin = snapshot.data;
-        
+
         Color statusColor = AppTheme.statusNeutral;
         String statusText = "No data yet";
         IconData statusIcon = Icons.help_outline;
@@ -151,7 +171,7 @@ class _ElderStatusCard extends StatelessWidget {
         if (checkin != null) {
           final timePassed = DateTime.now().difference(checkin.timestamp);
           lastTime = DateFormat.yMMMd().add_jm().format(checkin.timestamp);
-          
+
           if (checkin.isEmergency) {
             statusColor = AppTheme.statusAlert;
             statusText = "🚨 EMERGENCY SOS TRIGGERED 🚨";
@@ -173,6 +193,7 @@ class _ElderStatusCard extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
+              // Coloured status bar at top of card
               Container(
                 color: statusColor,
                 height: 8,
@@ -183,34 +204,44 @@ class _ElderStatusCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // — Header: name + threshold button —
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: AppTheme.primary.withOpacity(0.1),
-                          child: const Icon(Icons.person, color: AppTheme.primary),
+                          backgroundColor:
+                              AppTheme.primary.withValues(alpha: 0.1),
+                          child: const Icon(Icons.person,
+                              color: AppTheme.primary),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
-                            elder.name ?? elder.email.split('@')[0], // show name or email prefix
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                            elder.name ?? elder.email.split('@')[0],
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.av_timer_rounded),
                           color: AppTheme.textMuted,
                           tooltip: 'Set Inactivity Threshold',
-                          onPressed: () => _showThresholdDialog(context, elder),
+                          onPressed: () => _showThresholdDialog(context),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 24),
-                      Container(
+
+                    // — Status box —
+                    Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                        border: Border.all(
+                            color: statusColor.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         children: [
@@ -233,7 +264,8 @@ class _ElderStatusCard extends StatelessWidget {
                                   "Last active: $lastTime",
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: AppTheme.textMain.withOpacity(0.7),
+                                    color: AppTheme.textMain
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
                               ],
@@ -242,40 +274,68 @@ class _ElderStatusCard extends StatelessWidget {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 24),
                     const Divider(),
                     const SizedBox(height: 16),
+
+                    // — Weekly Safety Insights (all users) —
                     StreamBuilder<List<CheckinModel>>(
                       stream: firestoreService.streamWeeklyCheckins(elder.uid),
                       builder: (context, insightSnap) {
                         if (!insightSnap.hasData) return const SizedBox.shrink();
                         final weeklyCheckins = insightSnap.data!;
-                        
-                        // Simple stats logic
-                        final daysWithCheckin = weeklyCheckins.fold<Set<String>>({}, (set, checkin) {
-                          set.add(DateFormat('yyyy-MM-dd').format(checkin.timestamp));
+
+                        final daysWithCheckin = weeklyCheckins
+                            .fold<Set<String>>({}, (set, c) {
+                          set.add(DateFormat('yyyy-MM-dd').format(c.timestamp));
                           return set;
                         }).length;
 
-                        final safeDays = daysWithCheckin > 7 ? 7 : daysWithCheckin;
+                        final safeDays =
+                            daysWithCheckin > 7 ? 7 : daysWithCheckin;
                         final missedDays = 7 - safeDays;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Weekly Safety Insights",
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                            Row(
+                              children: [
+                                const Text(
+                                  "Weekly Safety Insights",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                                if (elder.isPremium) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.star_rounded,
+                                      size: 14, color: Color(0xFFE0B14C)),
+                                ],
+                              ],
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                const Icon(Icons.analytics_rounded, size: 20, color: AppTheme.primary),
+                                const Icon(Icons.analytics_rounded,
+                                    size: 20, color: AppTheme.primary),
                                 const SizedBox(width: 8),
-                                Text("Last 7 days: $safeDays/7 safe", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  "Last 7 days: $safeDays/7 safe",
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
                                 if (missedDays > 0) ...[
                                   const SizedBox(width: 12),
-                                  Text("• Missed $missedDays days", style: const TextStyle(color: AppTheme.statusAlert, fontWeight: FontWeight.bold))
+                                  Text(
+                                    "• Missed $missedDays days",
+                                    style: const TextStyle(
+                                      color: AppTheme.statusAlert,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ],
                               ],
                             ),

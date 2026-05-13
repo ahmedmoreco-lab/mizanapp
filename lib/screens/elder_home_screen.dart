@@ -9,6 +9,7 @@ import '../utils/theme.dart';
 import 'set_contact_screen.dart';
 import 'premium_paywall_screen.dart';
 import 'auth/account_settings_screen.dart';
+import 'login_screen.dart';
 import 'package:intl/intl.dart';
 
 class ElderHomeScreen extends StatefulWidget {
@@ -30,6 +31,12 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   Future<void> _handleCheckIn(String uid, {bool isEmergency = false}) async {
+    // 🔐 Guard: must have at least one trusted contact
+    final user = Provider.of<AppAuthProvider>(context, listen: false).userModel;
+    if (user == null || user.trustedContacts.isEmpty) {
+      _showMessage('Please add a trusted contact first', isError: true);
+      return;
+    }
     try {
       await Provider.of<ElderProvider>(context, listen: false)
           .checkIn(uid, isEmergency: isEmergency);
@@ -40,6 +47,12 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   Future<void> _confirmEmergency(String uid) async {
+    // 🔐 Guard: must have at least one trusted contact
+    final user = Provider.of<AppAuthProvider>(context, listen: false).userModel;
+    if (user == null || user.trustedContacts.isEmpty) {
+      _showMessage('Please add a trusted contact first', isError: true);
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -98,9 +111,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
 
     final hasContacts = user.trustedContacts.isNotEmpty;
     final contactCount = user.trustedContacts.length;
-    final maxFreeContacts = 3;
-    final maxPremiumContacts = 5;
-    final maxContacts = user.isPremium ? maxPremiumContacts : maxFreeContacts;
+    final maxContacts = user.isPremium ? 5 : 3;
 
     final displayName = (user.name != null && user.name!.isNotEmpty)
         ? user.name!
@@ -161,7 +172,15 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => authProvider.signOut(),
+            onPressed: () async {
+              await authProvider.signOut();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
             tooltip: 'Logout',
           ),
         ],
@@ -228,10 +247,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                           return Container(
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.07),
+                              color: statusColor.withValues(alpha: 0.07),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: statusColor.withOpacity(0.35),
+                                  color: statusColor.withValues(alpha: 0.35),
                                   width: 1.5),
                             ),
                             child: Row(
@@ -239,7 +258,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.15),
+                                    color: statusColor.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(statusIcon,
@@ -279,11 +298,11 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                             MaterialPageRoute(
                                 builder: (_) => const SetContactScreen())),
                         borderColor: hasContacts
-                            ? AppTheme.primary.withOpacity(0.25)
-                            : AppTheme.statusAlert.withOpacity(0.6),
+                            ? AppTheme.primary.withValues(alpha: 0.25)
+                            : AppTheme.statusAlert.withValues(alpha: 0.6),
                         backgroundColor: hasContacts
-                            ? AppTheme.primary.withOpacity(0.04)
-                            : AppTheme.statusAlert.withOpacity(0.05),
+                            ? AppTheme.primary.withValues(alpha: 0.04)
+                            : AppTheme.statusAlert.withValues(alpha: 0.05),
                         child: Row(
                           children: [
                             Container(
@@ -292,7 +311,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                 color: (hasContacts
                                         ? AppTheme.primary
                                         : AppTheme.statusAlert)
-                                    .withOpacity(0.12),
+                                    .withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -351,10 +370,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             decoration: BoxDecoration(
-                              color: AppTheme.primary.withOpacity(0.05),
+                              color: AppTheme.primary.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                  color: AppTheme.primary.withOpacity(0.2)),
+                                  color: AppTheme.primary.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               children: [
@@ -391,14 +410,14 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  const Color(0xFF8E2DE2).withOpacity(0.08),
-                                  const Color(0xFF4A00E0).withOpacity(0.08),
+                                  const Color(0xFF8E2DE2).withValues(alpha: 0.08),
+                                  const Color(0xFF4A00E0).withValues(alpha: 0.08),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
                                   color:
-                                      const Color(0xFF8E2DE2).withOpacity(0.35)),
+                                      const Color(0xFF8E2DE2).withValues(alpha: 0.35)),
                             ),
                             child: const Row(
                               children: [
@@ -538,7 +557,7 @@ class _ActionButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         padding: EdgeInsets.zero,
         elevation: 4,
-        shadowColor: color.withOpacity(0.4),
+        shadowColor: color.withValues(alpha: 0.4),
       ),
       onPressed: isLoading ? null : onPressed,
       child: isLoading
@@ -648,7 +667,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
                 child: Row(
                   children: [
                     Icon(Icons.alarm_off_rounded,
-                        color: AppTheme.textMuted.withOpacity(0.5)),
+                        color: AppTheme.textMuted.withValues(alpha: 0.5)),
                     const SizedBox(width: 10),
                     const Text('No reminders set.',
                         style: TextStyle(color: AppTheme.textMuted)),
@@ -670,8 +689,7 @@ class _ReminderDialogState extends State<_ReminderDialog> {
                           onPressed: () =>
                               setState(() => _times.remove(time)),
                         ),
-                      ))
-                  .toList(),
+                      )),
             const SizedBox(height: 4),
             TextButton.icon(
               onPressed: _pickTime,

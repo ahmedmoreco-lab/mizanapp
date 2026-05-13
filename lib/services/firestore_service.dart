@@ -115,6 +115,20 @@ class FirestoreService {
   }
 
   Future<void> recordCheckin(String elderUid, {bool isEmergency = false}) async {
+    // 🔐 Service-layer guard: block writes if elder has no trusted contacts.
+    // This is a second line of defence after the UI check in ElderHomeScreen.
+    final elderDoc = await _db
+        .collection(AppConstants.usersCollection)
+        .doc(elderUid)
+        .get();
+    if (elderDoc.exists) {
+      final data = elderDoc.data();
+      final contacts = (data?['trustedContacts'] as List?)?.cast<String>() ?? [];
+      if (contacts.isEmpty) {
+        throw Exception('Please add a trusted contact before sending a check-in or SOS.');
+      }
+    }
+
     final checkin = CheckinModel(
       id: '', // Firestore auto-generates this if we use add()
       userId: elderUid,
@@ -122,14 +136,28 @@ class FirestoreService {
       isEmergency: isEmergency,
     );
 
-    // Save checkin in a subcollection under the specific user 
+    // Save checkin in a subcollection under the specific user
     // to avoid needing a global composite index (where + orderBy)
     await _db
         .collection(AppConstants.usersCollection)
         .doc(elderUid)
         .collection(AppConstants.checkinsCollection)
         .add(checkin.toMap());
-        
+
+    // Write a sosEvents document so the Cloud Function trigger fires immediately.
+    // The function watches onCreate on this subcollection and sends push notifications.
+    if (isEmergency) {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection(AppConstants.sosEventsCollection)
+          .add({
+        'triggeredAt': Timestamp.now(),
+        'notificationSent': false,
+        'resolvedAt': null,
+      });
+    }
+
     await _db.collection(AppConstants.usersCollection).doc(elderUid).update({
       'lastCheckIn': Timestamp.now(),
       'currentEscalationLevel': 0, // Reset escalation level when they check in
@@ -203,20 +231,25 @@ class FirestoreService {
     });
   }
 
-  /// Deletes the user's Firestore document and all their checkins subcollection.
-  /// Note: subcollection documents must be deleted individually — Firestore
+  /// Deletes the user's Firestore document and ALL subcollections.
+  /// Subcollection documents must be deleted individually — Firestore
   /// does NOT auto-delete subcollections when a parent document is deleted.
   Future<void> deleteUserData(String uid) async {
-    // Delete all checkins in the subcollection first
-    final checkins = await _db
-        .collection(AppConstants.usersCollection)
-        .doc(uid)
-        .collection(AppConstants.checkinsCollection)
-        .get();
+    final userRef = _db.collection(AppConstants.usersCollection).doc(uid);
+
+    // Delete checkins subcollection
+    final checkins = await userRef.collection(AppConstants.checkinsCollection).get();
     for (final doc in checkins.docs) {
       await doc.reference.delete();
     }
-    // Then delete the user document itself
-    await _db.collection(AppConstants.usersCollection).doc(uid).delete();
+
+    // Delete sosEvents subcollection
+    final sosEvents = await userRef.collection(AppConstants.sosEventsCollection).get();
+    for (final doc in sosEvents.docs) {
+      await doc.reference.delete();
+    }
+
+    // Delete the user document itself last
+    await userRef.delete();
   }
 }

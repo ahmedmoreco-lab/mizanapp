@@ -20,12 +20,28 @@ class AuthService {
       }
       return null;
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        throw Exception('Wrong email or password, or the email address does not exist.');
-      } else if (e.code == 'invalid-email') {
-        throw Exception('The email address is badly formatted.');
+      // Firebase Auth SDK v5+ may return INVALID_LOGIN_CREDENTIALS instead
+      // of the older user-not-found / wrong-password codes.
+      switch (e.code) {
+        case 'user-not-found':
+          throw Exception('No account found with this email. Please check and try again.');
+        case 'wrong-password':
+          throw Exception('Incorrect password. Please try again.');
+        // Firebase SDK v9+ merges these into one opaque code
+        case 'invalid-credential':
+        case 'INVALID_LOGIN_CREDENTIALS':
+          throw Exception('Invalid email or password. Please check your credentials and try again.');
+        case 'invalid-email':
+          throw Exception('The email address is badly formatted.');
+        case 'user-disabled':
+          throw Exception('This account has been disabled. Please contact support.');
+        case 'too-many-requests':
+          throw Exception('Too many failed attempts. Please wait a moment and try again.');
+        case 'network-request-failed':
+          throw Exception('No internet connection. Please check your network and try again.');
+        default:
+          throw Exception(e.message ?? 'Login failed. Please try again.');
       }
-      throw Exception(e.message ?? 'Login failed');
     } catch (e) {
       throw Exception('An unexpected error occurred: $e');
     }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -10,8 +11,6 @@ class PremiumPaywallScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: AppTheme.textMain, // AppTheme.textMain serves as a dark bg
       body: Stack(
@@ -25,7 +24,7 @@ class PremiumPaywallScreen extends StatelessWidget {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primary.withOpacity(0.3),
+                color: AppTheme.primary.withValues(alpha: 0.3),
               ),
             ),
           ),
@@ -37,7 +36,7 @@ class PremiumPaywallScreen extends StatelessWidget {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.pinkAccent.withOpacity(0.2),
+                color: Colors.pinkAccent.withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -94,7 +93,7 @@ class PremiumPaywallScreen extends StatelessWidget {
                           _FeatureRow(
                             icon: Icons.group_rounded,
                             title: "Up to 5 Trusted Contacts",
-                            description: "Keep the whole family in the loop. Free only allows 1.",
+                            description: "Keep the whole family in the loop. Free plan allows up to 3.",
                           ),
                           _FeatureRow(
                             icon: Icons.route_rounded,
@@ -116,9 +115,9 @@ class PremiumPaywallScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                       child: Column(
                         children: [
@@ -144,21 +143,29 @@ class PremiumPaywallScreen extends StatelessWidget {
                               return CustomButton(
                                 text: 'Upgrade Now',
                                 isLoading: auth.isLoading,
-                                onPressed: () async {
-                                  try {
-                                    await auth.upgradeToPremium();
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Welcome to Premium Safety!")),
-                                      );
-                                      Navigator.pop(context);
-                                    }
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text("Error: $e")),
-                                      );
-                                    }
+                                onPressed: () {
+                                  if (kDebugMode) {
+                                    // Dev-only bypass: activates premium without payment
+                                    auth.upgradeToPremium().then((_) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('[DEBUG] Premium activated!')),
+                                        );
+                                        Navigator.pop(context);
+                                      }
+                                    }).catchError((e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Error: $e')),
+                                        );
+                                      }
+                                    });
+                                  } else {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (_) => const _ComingSoonSheet(),
+                                    );
                                   }
                                 },
                               );
@@ -172,6 +179,66 @@ class PremiumPaywallScreen extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComingSoonSheet extends StatelessWidget {
+  const _ComingSoonSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star_rounded, color: AppTheme.primary, size: 40),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Payment Coming Soon',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Secure payment integration is in progress.\nYou will be able to subscribe very soon!',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppTheme.textMuted, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Got it', style: TextStyle(fontSize: 16)),
             ),
           ),
         ],
@@ -197,7 +264,7 @@ class _FeatureRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.2),
+              color: AppTheme.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: AppTheme.primary, size: 28),

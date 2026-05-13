@@ -2,6 +2,7 @@ class AppConstants {
   // Firestore Collections
   static const String usersCollection = 'users';
   static const String checkinsCollection = 'checkins';
+  static const String sosEventsCollection = 'sosEvents';
 
   // Roles
   static const String roleElder = 'elder';

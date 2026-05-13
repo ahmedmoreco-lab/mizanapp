@@ -6,7 +6,11 @@ class UserModel {
   final String role;
   final String? trustedContactId; // Legacy
   final List<String> trustedContacts;
-  final String? name; // Optional, can add later
+  final String? name;
+  final String? firstName;
+  final String? lastName;
+  final int? age;
+  final String? gender;
   final int inactivityThresholdHours;
   final bool isPremium;
   final List<String> escalationOrder;
@@ -19,6 +23,10 @@ class UserModel {
     this.trustedContactId,
     this.trustedContacts = const [],
     this.name,
+    this.firstName,
+    this.lastName,
+    this.age,
+    this.gender,
     this.inactivityThresholdHours = 24,
     this.isPremium = false,
     this.escalationOrder = const [],
@@ -33,6 +41,10 @@ class UserModel {
       trustedContactId: data['trustedContactId'],
       trustedContacts: (data['trustedContacts'] as List<dynamic>?)?.cast<String>() ?? (data['trustedContactId'] != null ? [data['trustedContactId']] : []),
       name: data['name'],
+      firstName: data['firstName'],
+      lastName: data['lastName'],
+      age: data['age'] != null ? (data['age'] as num).toInt() : null,
+      gender: data['gender'],
       inactivityThresholdHours: data['inactivityThresholdHours'] != null ? (data['inactivityThresholdHours'] as num).toInt() : 24,
       isPremium: data['isPremium'] ?? false,
       escalationOrder: (data['escalationOrder'] as List<dynamic>?)?.cast<String>() ?? [],
@@ -50,6 +62,10 @@ class UserModel {
       trustedContactId: data['trustedContactId'],
       trustedContacts: (data['trustedContacts'] as List<dynamic>?)?.cast<String>() ?? (data['trustedContactId'] != null ? [data['trustedContactId']] : []),
       name: data['name'],
+      firstName: data['firstName'],
+      lastName: data['lastName'],
+      age: data['age'] != null ? (data['age'] as num).toInt() : null,
+      gender: data['gender'],
       inactivityThresholdHours: data['inactivityThresholdHours'] != null ? (data['inactivityThresholdHours'] as num).toInt() : 24,
       isPremium: data['isPremium'] ?? false,
       escalationOrder: (data['escalationOrder'] as List<dynamic>?)?.cast<String>() ?? [],
@@ -65,6 +81,10 @@ class UserModel {
       'trustedContactId': trustedContactId,
       'trustedContacts': trustedContacts,
       'name': name,
+      'firstName': firstName,
+      'lastName': lastName,
+      'age': age,
+      'gender': gender,
       'inactivityThresholdHours': inactivityThresholdHours,
       'isPremium': isPremium,
       'escalationOrder': escalationOrder,
@@ -86,6 +106,10 @@ class UserModel {
     String? trustedContactId,
     List<String>? trustedContacts,
     String? name,
+    String? firstName,
+    String? lastName,
+    int? age,
+    String? gender,
     int? inactivityThresholdHours,
     bool? isPremium,
     List<String>? escalationOrder,
@@ -98,6 +122,10 @@ class UserModel {
       trustedContactId: trustedContactId ?? this.trustedContactId,
       trustedContacts: trustedContacts ?? this.trustedContacts,
       name: name ?? this.name,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      age: age ?? this.age,
+      gender: gender ?? this.gender,
       inactivityThresholdHours: inactivityThresholdHours ?? this.inactivityThresholdHours,
       isPremium: isPremium ?? this.isPremium,
       escalationOrder: escalationOrder ?? this.escalationOrder,

@@ -5,6 +5,8 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../utils/theme.dart';
 import 'auth/forgot_password_screen.dart';
+import 'auth/verify_email_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -66,7 +68,21 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await authProvider.login(email, password);
       if (!mounted) return;
-      // AuthProvider changes state -> main.dart's wrapper reads it -> sends to RoleChecker
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        // Signed in but not verified — send them to the verify screen
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+          (route) => false,
+        );
+        return;
+      }
+
+      // Clear the entire back stack and go to home — RoleChecker will
+      // pick the correct screen (Elder or Contact) based on the user's role.
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } catch (e) {
       if (!mounted) return;
       _showMessage(e.toString().replaceAll('Exception: ', ''));
@@ -97,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       CircleAvatar(
                         radius: 46,
-                        backgroundColor: AppTheme.secondary.withOpacity(0.2),
+                        backgroundColor: AppTheme.secondary.withValues(alpha: 0.2),
                         child: const Icon(Icons.favorite_rounded, size: 46, color: AppTheme.primary),
                       ),
                       const SizedBox(height: 24),
