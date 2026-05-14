@@ -18,12 +18,9 @@ class _SetContactScreenState extends State<SetContactScreen> {
   // 🔥 MAIN FUNCTION (FULL FLOW)
   Future<void> linkTrustedContact() async {
     final email = emailController.text.trim();
-print(FirebaseAuth.instance.currentUser);
-
     // ✅ Validate input
     if (email.isEmpty) {
       setState(() => message = "⚠️ Please enter an email");
-      print(FirebaseAuth.instance.currentUser?.uid);
       return;
     }
 

@@ -85,10 +85,10 @@ packages:
     dependency: "direct main"
     description:
       name: cloud_firestore
-      sha256: "0af4f1e0b7f82a2082ad2c886b042595d85c7641616688609dd999d33aeef850"
+      sha256: "7bd7a6dc5cdacd56bcbcb44364121affa3d2f2b41faeaf58c2b8c4dfb1f4f0b4"
       url: "https://pub.dev"
     source: hosted
-    version: "5.4.0"
+    version: "5.6.10"
   cloud_firestore_platform_interface:
     dependency: transitive
     description:
@@ -205,10 +205,10 @@ packages:
     dependency: "direct main"
     description:
       name: firebase_messaging
-      sha256: "29941ba5a3204d80656c0e52103369aa9a53edfd9ceae05a2bb3376f24fda453"
+      sha256: c6711cf2f455532b84a94022c7aaf85088849763af2f01b775ca79d82d10a01a
       url: "https://pub.dev"
     source: hosted
-    version: "15.1.0"
+    version: "15.2.8"
   firebase_messaging_platform_interface:
     dependency: transitive
     description:
