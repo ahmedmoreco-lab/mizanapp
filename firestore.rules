@@ -26,10 +26,19 @@ service cloud.firestore {
 
       // ─── Checkins Subcollection ───
       match /checkins/{checkinId} {
-        // Elder can write their own check-ins
         allow write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null;
+      }
 
-        // Any authenticated user can read (contacts viewing elder status)
+      // ─── SOS Events Subcollection ───
+      match /sosEvents/{eventId} {
+        allow write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null;
+      }
+
+      // ─── Status Subcollection ───
+      match /status/{statusId} {
+        allow write: if request.auth != null && request.auth.uid == userId;
         allow read: if request.auth != null;
       }
     }

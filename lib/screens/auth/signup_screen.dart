@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'verify_email_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -94,8 +95,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account')),
+      appBar: AppBar(title: Text(l.createAccount)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -104,15 +107,9 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Sign Up',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
+                Text(l.signUp, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                const Text(
-                  'Fill in your details to get started.',
-                  style: TextStyle(fontSize: 15, color: Colors.black54),
-                ),
+                Text(l.fillDetails, style: const TextStyle(fontSize: 15, color: Colors.black54)),
                 const SizedBox(height: 28),
 
                 // — Name row —
@@ -121,16 +118,16 @@ class _SignupScreenState extends State<SignupScreen> {
                     Expanded(
                       child: _Field(
                         controller: _firstNameController,
-                        label: 'First Name',
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        label: l.firstName,
+                        validator: (v) => (v == null || v.trim().isEmpty) ? l.required : null,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: _Field(
                         controller: _lastNameController,
-                        label: 'Last Name',
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                        label: l.lastName,
+                        validator: (v) => (v == null || v.trim().isEmpty) ? l.required : null,
                       ),
                     ),
                   ],
@@ -140,12 +137,12 @@ class _SignupScreenState extends State<SignupScreen> {
                 // — Age —
                 _Field(
                   controller: _ageController,
-                  label: 'Age',
+                  label: l.age,
                   keyboardType: TextInputType.number,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (v == null || v.trim().isEmpty) return l.required;
                     final age = int.tryParse(v.trim());
-                    if (age == null || age < 1 || age > 120) return 'Enter a valid age';
+                    if (age == null || age < 1 || age > 120) return l.enterValidAge;
                     return null;
                   },
                 ),
@@ -154,23 +151,23 @@ class _SignupScreenState extends State<SignupScreen> {
                 // — Gender —
                 DropdownButtonFormField<String>(
                   value: _selectedGender,
-                  decoration: const InputDecoration(labelText: 'Gender'),
+                  decoration: InputDecoration(labelText: l.gender),
                   items: _genders
                       .map((g) => DropdownMenuItem(value: g, child: Text(g)))
                       .toList(),
                   onChanged: (v) => setState(() => _selectedGender = v),
-                  validator: (v) => v == null ? 'Please select a gender' : null,
+                  validator: (v) => v == null ? l.selectGender : null,
                 ),
                 const SizedBox(height: 16),
 
                 // — Email —
                 _Field(
                   controller: _emailController,
-                  label: 'Email',
+                  label: l.email,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
-                    if (!v.contains('@')) return 'Enter a valid email';
+                    if (v == null || v.trim().isEmpty) return l.required;
+                    if (!v.contains('@')) return l.enterValidEmail;
                     return null;
                   },
                 ),
@@ -181,15 +178,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: l.password,
                     suffixIcon: IconButton(
                       icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Required';
-                    if (v.length < 6) return 'Password must be at least 6 characters';
+                    if (v == null || v.isEmpty) return l.required;
+                    if (v.length < 6) return l.passwordTooShort;
                     return null;
                   },
                 ),
@@ -198,10 +195,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 // — Role —
                 DropdownButtonFormField<String>(
                   value: _selectedRole,
-                  decoration: const InputDecoration(labelText: 'Role'),
-                  items: const [
-                    DropdownMenuItem(value: 'elder', child: Text('Elder')),
-                    DropdownMenuItem(value: 'contact', child: Text('Trusted Contact')),
+                  decoration: InputDecoration(labelText: l.role),
+                  items: [
+                    DropdownMenuItem(value: 'elder', child: Text(l.elderRole)),
+                    DropdownMenuItem(value: 'contact', child: Text(l.trustedContactRole)),
                   ],
                   onChanged: (v) {
                     if (v != null) setState(() => _selectedRole = v);
@@ -223,14 +220,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   child: SwitchListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    title: const Text(
-                      'Start with Premium',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    subtitle: const Text(
-                      'Up to 5 trusted contacts, location sharing & more.',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                    title: Text(l.startWithPremium, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                    subtitle: Text(l.premiumSubtitle, style: const TextStyle(fontSize: 13)),
                     secondary: const Icon(Icons.star_rounded, color: Color(0xFFE0B14C)),
                     value: _isPremium,
                     activeColor: const Color(0xFF123247),
@@ -246,7 +237,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
                           onPressed: _signUp,
-                          child: const Text('Create Account'),
+                          child: Text(l.createAccount),
                         ),
                 ),
                 const SizedBox(height: 16),
@@ -254,7 +245,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 Center(
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Already have an account? Log in"),
+                    child: Text(l.haveAccount),
                   ),
                 ),
               ],

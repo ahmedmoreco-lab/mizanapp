@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/elder_provider.dart';
+import '../providers/monitoring_provider.dart';
 import '../services/firestore_service.dart';
 import '../models/checkin_model.dart';
 import '../models/user_model.dart';
 import '../utils/theme.dart';
+import '../widgets/monitoring_toggle_widget.dart';
 import 'set_contact_screen.dart';
 import 'premium_paywall_screen.dart';
 import 'auth/account_settings_screen.dart';
@@ -22,6 +25,18 @@ class ElderHomeScreen extends StatefulWidget {
 class _ElderHomeScreenState extends State<ElderHomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AppAuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null) {
+        Provider.of<ElderProvider>(context, listen: false).startListeningToStatus(uid);
+        Provider.of<MonitoringProvider>(context, listen: false).bind(uid);
+      }
+    });
+  }
+
   void _showMessage(String text, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -31,26 +46,26 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   }
 
   Future<void> _handleCheckIn(String uid, {bool isEmergency = false}) async {
-    // 🔐 Guard: must have at least one trusted contact
+    final l = AppLocalizations.of(context);
     final user = Provider.of<AppAuthProvider>(context, listen: false).userModel;
     if (user == null || user.trustedContacts.isEmpty) {
-      _showMessage('Please add a trusted contact first', isError: true);
+      _showMessage(l.addContactFirst, isError: true);
       return;
     }
     try {
       await Provider.of<ElderProvider>(context, listen: false)
           .checkIn(uid, isEmergency: isEmergency);
-      _showMessage(isEmergency ? '🚨 Emergency Alert Sent!' : '✅ Check-in successful!');
+      _showMessage(isEmergency ? l.emergencyAlertSent : l.checkInSuccess);
     } catch (e) {
       _showMessage('Error: $e', isError: true);
     }
   }
 
   Future<void> _confirmEmergency(String uid) async {
-    // 🔐 Guard: must have at least one trusted contact
+    final l = AppLocalizations.of(context);
     final user = Provider.of<AppAuthProvider>(context, listen: false).userModel;
     if (user == null || user.trustedContacts.isEmpty) {
-      _showMessage('Please add a trusted contact first', isError: true);
+      _showMessage(l.addContactFirst, isError: true);
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -58,37 +73,75 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_rounded, color: Colors.red, size: 28),
-            SizedBox(width: 12),
-            Text('Confirm Emergency'),
+            const Icon(Icons.warning_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Text(l.confirmEmergency),
           ],
         ),
-        content: const Text(
-          'This will immediately alert your Trusted Contacts.\n\nAre you sure?',
-          style: TextStyle(fontSize: 16),
-        ),
+        content: Text(l.emergencyAlertText, style: const TextStyle(fontSize: 16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+            child: Text(l.cancel, style: const TextStyle(fontSize: 16)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12))),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yes, Send SOS',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(l.yesSendSOS, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
     if (confirmed == true && mounted) {
       await _handleCheckIn(uid, isEmergency: true);
+    }
+  }
+
+  Future<void> _confirmResolve(String uid) async {
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
+            const SizedBox(width: 12),
+            Text(l.areYouSafe),
+          ],
+        ),
+        content: Text(l.alertOverText, style: const TextStyle(fontSize: 16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel, style: const TextStyle(fontSize: 16)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.yesSafe, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await Provider.of<ElderProvider>(context, listen: false).resolveSOSAlert(uid);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).couldNotCancel), backgroundColor: Colors.red.shade700),
+      );
     }
   }
 
@@ -104,9 +157,14 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AppAuthProvider>(context);
     final user = authProvider.userModel;
+    final elderProvider = context.watch<ElderProvider>();
 
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (elderProvider.sosActive) {
+      return _buildSOSActiveState(context, user, elderProvider);
     }
 
     final hasContacts = user.trustedContacts.isNotEmpty;
@@ -117,10 +175,12 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
         ? user.name!
         : user.email.split('@')[0];
 
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('My Dashboard'),
+        title: Text(l.myDashboard),
         actions: [
           if (user.isPremium) ...[
             Container(
@@ -166,7 +226,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
           ],
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Account Settings',
+            tooltip: l.accountSettings,
             onPressed: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
           ),
@@ -181,7 +241,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                 (route) => false,
               );
             },
-            tooltip: 'Logout',
+            tooltip: l.logout,
           ),
         ],
       ),
@@ -207,7 +267,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'How are you feeling today?',
+                        l.howAreYouFeeling,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.textMuted, fontSize: 15),
@@ -221,7 +281,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                           final checkin = snapshot.data;
                           final hasCheckedIn = checkin != null;
 
-                          String statusText = 'No check-in recorded yet';
+                          String statusText = l.noCheckInYet;
                           Color statusColor = AppTheme.statusNeutral;
                           IconData statusIcon = Icons.help_outline_rounded;
                           String? subText;
@@ -234,12 +294,12 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                             if (timePassed.inHours <
                                 user.inactivityThresholdHours) {
                               statusColor = AppTheme.statusSafe;
-                              statusText = 'You are Safe ✓';
+                              statusText = l.youAreSafe;
                               statusIcon = Icons.check_circle_rounded;
                             } else {
                               statusColor = AppTheme.statusAlert;
                               statusText =
-                                  'Missed Check-in (>${user.inactivityThresholdHours}h)';
+                                  '${l.missedCheckIn} (>${user.inactivityThresholdHours}h)';
                               statusIcon = Icons.error_rounded;
                             }
                           }
@@ -331,8 +391,8 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                 children: [
                                   Text(
                                     hasContacts
-                                        ? 'Trusted Contacts ($contactCount/$maxContacts)'
-                                        : 'No Trusted Contact',
+                                        ? '${l.trustedContacts} ($contactCount/$maxContacts)'
+                                        : l.noTrustedContact,
                                     style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -341,10 +401,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     !hasContacts
-                                        ? '⚠️ Required for safety alerts!'
+                                        ? l.requiredForSafety
                                         : contactCount < maxContacts
-                                            ? 'Tap to manage · Add up to $maxContacts'
-                                            : 'Safety network complete',
+                                            ? '${l.tapToManage} $maxContacts'
+                                            : l.safetyNetworkComplete,
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: !hasContacts
@@ -359,6 +419,10 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                           ],
                         ),
                       ),
+
+                      // ── Background Safety Monitor (Android only) ──────────
+                      const SizedBox(height: 16),
+                      const MonitoringToggleWidget(),
 
                       // ── Active Reminders Row (Premium) ────────────────────
                       if (user.isPremium &&
@@ -419,14 +483,14 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                   color:
                                       const Color(0xFF8E2DE2).withValues(alpha: 0.35)),
                             ),
-                            child: const Row(
+                            child: Row(
                               children: [
-                                Icon(Icons.star_rounded,
+                                const Icon(Icons.star_rounded,
                                     color: Colors.amber, size: 18),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
-                                    'Premium: Smart escalation · 5 contacts · Custom reminders',
+                                    l.premiumBanner,
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: Color(0xFF8E2DE2),
@@ -458,7 +522,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                     isLoading: elderProvider.isLoading,
                                     onPressed: () => _handleCheckIn(user.uid),
                                     icon: Icons.waving_hand_rounded,
-                                    label: "I'M OK",
+                                    label: l.imOk,
                                     fontSize: 22,
                                   ),
                                 ),
@@ -474,7 +538,7 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
                                     onPressed: () =>
                                         _confirmEmergency(user.uid),
                                     icon: Icons.warning_rounded,
-                                    label: 'SOS',
+                                    label: l.sos,
                                     fontSize: 32,
                                   ),
                                 ),
@@ -489,6 +553,92 @@ class _ElderHomeScreenState extends State<ElderHomeScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSOSActiveState(
+      BuildContext context, UserModel user, ElderProvider elderProvider) {
+    final l = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF1F1),
+      appBar: AppBar(
+        title: Text(l.myDashboard),
+        backgroundColor: Colors.red.shade700,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              // Pulsing icon
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.85, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeInOut,
+                builder: (context, scale, child) => Transform.scale(
+                  scale: scale,
+                  child: child,
+                ),
+                onEnd: () => setState(() {}),
+                child: Icon(Icons.warning_amber_rounded,
+                    size: 100, color: Colors.red.shade700),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                l.sosAlertActive,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l.helpOnTheWay,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+              ),
+              const Spacer(),
+              // "I'm Safe Now" button
+              SizedBox(
+                height: 84,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade600,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
+                    elevation: 4,
+                  ),
+                  onPressed: elderProvider.isResolvingSOS
+                      ? null
+                      : () => _confirmResolve(user.uid),
+                  child: elderProvider.isResolvingSOS
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(l.imSafeNow,
+                                style: const TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(l.tapWhenSafe,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.85))),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

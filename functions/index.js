@@ -113,8 +113,20 @@ async function _sendSosToContact(contactId, elderId, elderName) {
 // FUNCTION 2 — Inactivity Monitor (Scheduled — every 30 minutes)
 // Checks every elder's last check-in against their inactivity threshold.
 // Implements escalation: notifies contacts one by one across consecutive runs.
+//
+// Also runs the PASSIVE BACKGROUND MONITOR check (two-stage flow):
+//   1. If an elder has monitoringEnabled and no activity for > activityThreshold
+//      → first send a gentle "Are you okay?" prompt to the ELDER
+//   2. If the prompt was sent and there is still no activity / check-in after
+//      the grace period → fall through to the contact alert.
 // TODO: Requires Blaze plan
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Activity gap defaults (hours). The elder's per-user inactivityThresholdHours
+// is used if present, otherwise we default to 12h activity / 1h grace.
+const DEFAULT_ACTIVITY_THRESHOLD_HOURS = 12;
+const DEFAULT_ACTIVITY_GRACE_HOURS = 1;
+
 exports.checkInMonitor = functions.pubsub
   .schedule("every 30 minutes")
   .timeZone("UTC")
@@ -130,6 +142,11 @@ exports.checkInMonitor = functions.pubsub
 
     usersSnapshot.forEach((doc) => {
       const data = doc.data();
+      // Each elder gets two independent checks:
+      //   (a) passive activity-gap (only if monitoringEnabled)
+      //   (b) classic missed-check-in escalation
+      promises.push(_runPassiveActivityCheck(doc, now));
+
       if (!data.lastCheckIn) return;
 
       const thresholdHours = data.inactivityThresholdHours || 24;
@@ -166,6 +183,145 @@ exports.checkInMonitor = functions.pubsub
     await Promise.all(promises);
     return null;
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper — Passive activity-gap two-stage flow
+// Reads users/{elderId}/status/current to find lastActivityAt and decide
+// whether to (a) prompt the elder, (b) fall through to contact alert, or
+// (c) do nothing.
+// ─────────────────────────────────────────────────────────────────────────────
+async function _runPassiveActivityCheck(elderDoc, now) {
+  try {
+    const data = elderDoc.data();
+    const statusRef = elderDoc.ref.collection("status").doc("current");
+    const statusSnap = await statusRef.get();
+    if (!statusSnap.exists) return;
+
+    const status = statusSnap.data();
+    if (status.monitoringEnabled !== true) return;
+    if (!status.lastActivityAt) return;
+
+    const lastActivityMs = status.lastActivityAt.toDate().getTime();
+    const activityGapMs = now - lastActivityMs;
+
+    const activityThresholdHours =
+      data.inactivityThresholdHours || DEFAULT_ACTIVITY_THRESHOLD_HOURS;
+    const activityThresholdMs = activityThresholdHours * 60 * 60 * 1000;
+    if (activityGapMs < activityThresholdMs) return;
+
+    const elderName = data.name || data.email || "Your elder";
+
+    // CASE A — gentle prompt to the elder first
+    if (status.activityCheckPromptSent !== true) {
+      await _sendCheckInPromptToElder(elderDoc.id, data.fcmToken, elderName);
+      await statusRef.set(
+        {
+          activityCheckPromptSent: true,
+          activityPromptSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      console.log(`👋  Sent activity prompt to elder ${elderDoc.id}.`);
+      return;
+    }
+
+    // CASE B — prompt was sent; check grace window before alerting contacts
+    const promptSentAt = status.activityPromptSentAt
+      ? status.activityPromptSentAt.toDate().getTime()
+      : lastActivityMs;
+    const graceMs = DEFAULT_ACTIVITY_GRACE_HOURS * 60 * 60 * 1000;
+    if (now - promptSentAt < graceMs) return;
+
+    // Anti-spam: don't re-alert if already notified recently for this period.
+    if (status.notifiedAt) {
+      const notifiedMs = status.notifiedAt.toDate().getTime();
+      if (now - notifiedMs < graceMs) return;
+    }
+
+    let escalationOrder = data.escalationOrder || [];
+    if (escalationOrder.length === 0)
+      escalationOrder = data.trustedContacts || [];
+    if (escalationOrder.length === 0 && data.trustedContactId) {
+      escalationOrder = [data.trustedContactId];
+    }
+    if (escalationOrder.length === 0) {
+      console.log(
+        `⚠️  Activity gap on ${elderDoc.id} but no contacts — cannot escalate.`
+      );
+      return;
+    }
+
+    const contactId = escalationOrder[0];
+    await _notifyContactInactivity(elderDoc, contactId, elderName, 1);
+    await statusRef.set(
+      { notifiedAt: admin.firestore.FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error(
+      `Activity check failed for elder ${elderDoc.id}: ${err.message}`
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper — Send the gentle "Are you okay?" prompt to the elder
+// ─────────────────────────────────────────────────────────────────────────────
+async function _sendCheckInPromptToElder(elderId, fcmToken, elderName) {
+  // In-app alert record so the dashboard / future log view can surface it.
+  await db.collection("alerts").add({
+    userId: elderId,
+    contactId: elderId, // recipient is the elder themselves
+    elderName: elderName,
+    message: "We noticed no activity for a while. Please tap I'm OK.",
+    type: "activity_prompt",
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    isRead: false,
+  });
+
+  if (!fcmToken) {
+    console.log(
+      `📭  Elder ${elderId} has no FCM token — activity prompt saved only.`
+    );
+    return;
+  }
+
+  const message = {
+    token: fcmToken,
+    notification: {
+      title: "👋 Are you okay?",
+      body: "We noticed no activity for a while. Please open SoulPing Care and tap I'm OK.",
+    },
+    data: {
+      type: "activity_prompt",
+      elderId: elderId,
+    },
+    android: {
+      priority: "high",
+      notification: {
+        channelId: "soulping_alerts",
+        sound: "default",
+        clickAction: "FLUTTER_NOTIFICATION_CLICK",
+      },
+    },
+    apns: {
+      payload: {
+        aps: { sound: "default", badge: 1, contentAvailable: true },
+      },
+    },
+  };
+
+  try {
+    const response = await messaging.send(message);
+    console.log(
+      `✅  Activity prompt sent to elder ${elderId}. FCM: ${response}`
+    );
+  } catch (err) {
+    console.error(
+      `❌  Activity prompt FCM failed for elder ${elderId}: ${err.message}`
+    );
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper — Notify a contact about missed check-in, advance escalation level

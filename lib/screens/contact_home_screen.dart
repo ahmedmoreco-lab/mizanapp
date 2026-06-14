@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/contact_provider.dart';
 import '../services/firestore_service.dart';
@@ -20,19 +21,35 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AppAuthProvider>(context, listen: false)
+          .userModel
+          ?.uid;
+      if (uid != null) {
+        Provider.of<ContactProvider>(context, listen: false)
+            .startWatchingForAlerts(uid);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AppAuthProvider>(context);
     final user = authProvider.userModel;
 
     if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
+    final l = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Monitoring Dashboard'),
+        title: Text(l.monitoringDashboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Account Settings',
+            tooltip: l.accountSettings,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
@@ -41,7 +58,7 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => authProvider.signOut(),
-            tooltip: 'Logout',
+            tooltip: l.logout,
           ),
         ],
       ),
@@ -69,13 +86,13 @@ class _ContactHomeScreenState extends State<ContactHomeScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        "No Elders Linked",
+                        l.noEldersLinked,
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 16),
                       Text(
                         "Hi ${user.name != null && user.name!.isNotEmpty ? user.name : user.email.split('@')[0]},\n"
-                        "an elder must add your email ('${user.email}') in their app to link their account to yours.",
+                        "${l.noEldersDesc.replaceFirst('your email', "'${user.email}'")}",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
@@ -116,12 +133,13 @@ class _ElderStatusCard extends StatelessWidget {
   });
 
   void _showThresholdDialog(BuildContext context) {
+    final l = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Set Alert Threshold"),
+        title: Text(l.setAlertThreshold),
         content: Text(
-          "Alert me if ${elder.name ?? 'this elder'} misses a check-in for more than:",
+          "${l.alertMeIf} ${elder.name ?? 'this elder'} ${l.missesCheckIn}",
         ),
         actions: [
           for (final hours in [4, 8, 12, 24, 48])
@@ -163,6 +181,7 @@ class _ElderStatusCard extends StatelessWidget {
       builder: (context, snapshot) {
         final checkin = snapshot.data;
 
+        final l = AppLocalizations.of(context);
         Color statusColor = AppTheme.statusNeutral;
         String statusText = "No data yet";
         IconData statusIcon = Icons.help_outline;
@@ -261,7 +280,7 @@ class _ElderStatusCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "Last active: $lastTime",
+                                  "${l.lastActive} $lastTime",
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: AppTheme.textMain
@@ -301,9 +320,9 @@ class _ElderStatusCard extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Text(
-                                  "Weekly Safety Insights",
-                                  style: TextStyle(
+                                Text(
+                                  l.weeklySafetyInsights,
+                                  style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: AppTheme.textMuted,

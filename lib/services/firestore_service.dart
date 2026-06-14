@@ -156,12 +156,41 @@ class FirestoreService {
         'notificationSent': false,
         'resolvedAt': null,
       });
+
+      // Mark SOS as active so the dashboard switches to SOS Active state.
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current')
+          .set({
+        'sosActive': true,
+        'notifiedAt': Timestamp.now(),
+      }, SetOptions(merge: true));
     }
 
     await _db.collection(AppConstants.usersCollection).doc(elderUid).update({
       'lastCheckIn': Timestamp.now(),
-      'currentEscalationLevel': 0, // Reset escalation level when they check in
+      'currentEscalationLevel': 0,
     });
+
+    // Manual check-in is also the strongest possible "I'm alive" signal —
+    // refresh the passive monitor's activity timestamp and clear any
+    // pending "Are you okay?" prompt so the two-stage flow resets.
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current')
+          .set({
+        'lastActivityAt': FieldValue.serverTimestamp(),
+        'lastActivityType': 'manual',
+        'activityCheckPromptSent': false,
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Non-fatal: the manual check-in itself already succeeded.
+    }
   }
 
   Stream<CheckinModel?> streamLastCheckin(String elderUid) {
@@ -190,6 +219,97 @@ class FirestoreService {
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => CheckinModel.fromDocument(doc)).toList());
+  }
+
+  // --- Client-side notification de-dup ---
+  //
+  // Used by foreground stream listeners + workmanager + the foreground
+  // service so we don't fire the same local notification on every cycle.
+
+  Future<void> markSosNotified(String elderUid) async {
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current')
+          .set({'lastSosNotifiedAt': FieldValue.serverTimestamp()},
+              SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  Future<void> markInactivityNotified(String elderUid) async {
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current')
+          .set({'lastInactivityNotifiedAt': FieldValue.serverTimestamp()},
+              SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  Future<void> markSelfReminderShown(String elderUid) async {
+    try {
+      await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current')
+          .set({
+        'activityCheckPromptSent': true,
+        'activityPromptSentAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
+  }
+
+  // --- SOS Status ---
+
+  Stream<DocumentSnapshot> streamElderStatus(String elderUid) {
+    return _db
+        .collection(AppConstants.usersCollection)
+        .doc(elderUid)
+        .collection('status')
+        .doc('current')
+        .snapshots();
+  }
+
+  Future<void> resolveSOSAlert(String elderUid) async {
+    try {
+      // Find the most recent unresolved SOS event.
+      final sosQuery = await _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection(AppConstants.sosEventsCollection)
+          .orderBy('triggeredAt', descending: true)
+          .limit(1)
+          .get();
+
+      final batch = _db.batch();
+
+      // WRITE 1 — clear the active SOS flag.
+      final statusRef = _db
+          .collection(AppConstants.usersCollection)
+          .doc(elderUid)
+          .collection('status')
+          .doc('current');
+      batch.update(statusRef, {
+        'sosActive': false,
+        'resolvedAt': FieldValue.serverTimestamp(),
+      });
+
+      // WRITE 2 — stamp the SOS event as resolved (if one exists).
+      if (sosQuery.docs.isNotEmpty) {
+        batch.update(sosQuery.docs.first.reference, {
+          'resolvedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // --- Contact Features ---

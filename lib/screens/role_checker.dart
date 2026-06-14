@@ -1,6 +1,11 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../services/background_check_service.dart';
 import 'contact_home_screen.dart';
 import 'elder_home_screen.dart';
 
@@ -14,9 +19,17 @@ class RoleChecker extends StatefulWidget {
 class _RoleCheckerState extends State<RoleChecker> {
   Future<DocumentSnapshot>? _roleFuture;
   String? _cachedUid;
+  bool _periodicTaskRegistered = false;
 
   Future<DocumentSnapshot> _fetchRole(String uid) {
     return FirebaseFirestore.instance.collection('users').doc(uid).get();
+  }
+
+  Future<void> _ensurePeriodicTask() async {
+    if (_periodicTaskRegistered) return;
+    if (kIsWeb || !Platform.isAndroid) return;
+    _periodicTaskRegistered = true;
+    await BackgroundCheckScheduler.registerPeriodicTask();
   }
 
   @override
@@ -32,7 +45,7 @@ class _RoleCheckerState extends State<RoleChecker> {
 
         if (!authSnapshot.hasData) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushNamedAndRemoveUntil('/welcome', (_) => false);
+            Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
           });
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -46,6 +59,8 @@ class _RoleCheckerState extends State<RoleChecker> {
           _cachedUid = uid;
           _roleFuture = _fetchRole(uid);
         }
+        // Register the workmanager periodic check once per session.
+        _ensurePeriodicTask();
 
         return FutureBuilder<DocumentSnapshot>(
           future: _roleFuture,

@@ -1,15 +1,24 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/role_checker.dart';
-import 'screens/welcome_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/elder_provider.dart';
 import 'providers/contact_provider.dart';
+import 'providers/locale_provider.dart';
+import 'providers/monitoring_provider.dart';
+import 'services/background_check_service.dart';
+import 'services/local_notification_service.dart';
 import 'services/notification_service.dart';
 
 
@@ -33,12 +42,25 @@ void main() async {
     debugPrint('Notification init skipped: $e');
   }
 
+  if (!kIsWeb && Platform.isAndroid) {
+    try {
+      FlutterForegroundTask.initCommunicationPort();
+    } catch (e) {
+      debugPrint('Foreground task port init skipped: $e');
+    }
+    // Local-notification channel + workmanager periodic check (Blaze-free fallback).
+    await LocalNotificationsHelper.ensureReady();
+    await BackgroundCheckScheduler.initWorkmanager();
+  }
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => AppAuthProvider()),
         ChangeNotifierProvider(create: (_) => ElderProvider()),
         ChangeNotifierProvider(create: (_) => ContactProvider()),
+        ChangeNotifierProvider(create: (_) => MonitoringProvider()),
       ],
       child: const MyApp(),
     ),
@@ -62,9 +84,19 @@ class MyApp extends StatelessWidget {
       onSurface: _brandText,
     );
 
+    final locale = context.watch<LocaleProvider>().locale;
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'SoulPing Care',
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         colorScheme: colorScheme,
         useMaterial3: true,
@@ -194,9 +226,8 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WelcomeScreen(),
+      home: const LoginScreen(),
       routes: {
-        '/welcome': (_) => const WelcomeScreen(),
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),
         '/home': (_) => const RoleChecker(),
