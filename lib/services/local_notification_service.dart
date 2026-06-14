@@ -101,6 +101,23 @@ class LocalNotificationsHelper {
     );
   }
 
+  /// Generic local notification used by [NotificationService] when an FCM
+  /// foreground message arrives. Reuses this helper's channel so there is
+  /// only one channel definition app-wide. Uses a per-call unique ID so
+  /// FCM-driven alerts do not collide with the semantic ones above.
+  static Future<void> showFromFcm({
+    required String title,
+    required String body,
+  }) async {
+    await ensureReady();
+    await _plugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      _details(importance: Importance.max, priority: Priority.high),
+    );
+  }
+
   /// Reads the saved locale code from SharedPreferences (matches the same
   /// key used by [LocaleProvider]) and returns localized notification
   /// strings. Defaults to English on any failure.
