@@ -38,7 +38,7 @@ class NotificationService {
       final notification = message.notification;
       if (notification == null) return;
       LocalNotificationsHelper.showFromFcm(
-        title: notification.title ?? 'SoulPing Alert',
+        title: notification.title ?? 'Mizan Alert',
         body: notification.body ?? '',
       );
     });

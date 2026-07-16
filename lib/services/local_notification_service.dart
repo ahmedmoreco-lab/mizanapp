@@ -12,8 +12,8 @@ class LocalNotificationsHelper {
   LocalNotificationsHelper._();
 
   static const String channelId = 'soulping_alerts';
-  static const String channelName = 'SoulPing Safety Alerts';
-  static const String channelDescription = 'Safety alerts from SoulPing Care';
+  static const String channelName = 'Mizan Safety Alerts';
+  static const String channelDescription = 'Safety alerts from Mizan';
 
   // Distinct, stable IDs so the same kind of alert never stacks.
   static const int sosNotificationId = 1001;
@@ -182,7 +182,7 @@ final _NotifStrings _englishStrings = _NotifStrings(
       '$name has not checked in for $hours hours. Please check on them.',
   selfReminderTitle: '👋 Are you okay?',
   selfReminderBody:
-      "We noticed no activity for a while. Please open SoulPing Care and tap I'm OK.",
+      "We noticed no activity for a while. Please open Mizan and tap I'm OK.",
 );
 
 final _NotifStrings _arabicStrings = _NotifStrings(
@@ -193,5 +193,5 @@ final _NotifStrings _arabicStrings = _NotifStrings(
       'لم يسجل $name حضوره منذ $hours ساعة. يرجى الاطمئنان عليه.',
   selfReminderTitle: '👋 هل أنت بخير؟',
   selfReminderBody:
-      'لاحظنا عدم وجود نشاط لفترة. يرجى فتح SoulPing Care والضغط على "بخير".',
+      'لاحظنا عدم وجود نشاط لفترة. يرجى فتح Mizan والضغط على "بخير".',
 );

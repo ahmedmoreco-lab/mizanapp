@@ -72,7 +72,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               children: [
                 const SizedBox(height: 20),
                 const Text(
-                  "Welcome to SoulPing Care!",
+                  "Welcome to Mizan!",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

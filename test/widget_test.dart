@@ -1,23 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:soulping_care/main.dart';
 
 void main() {
-  testWidgets('App shows the login screen', (WidgetTester tester) async {
-    await tester.pumpWidget(const MyApp());
+  setUp(() {
+    SharedPreferences.setMockInitialValues({'locale': 'en'});
+  });
 
-    expect(find.text('Email'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
-    expect(find.text('SoulPing Care'), findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'Sign In'), findsOneWidget);
-    expect(find.text('Need an account? Create one'), findsOneWidget);
+  testWidgets('Mizan opens on the Today dashboard', (tester) async {
+    await tester.pumpWidget(const MizanApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mizan'), findsOneWidget);
+    expect(find.textContaining('Ahmed'), findsOneWidget);
+    expect(find.text('Today’s main goal'), findsOneWidget);
+    expect(find.text('Start Work Mode'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('bottom navigation opens the Tasks screen', (tester) async {
+    await tester.pumpWidget(const MizanApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tasks'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today’s priorities'), findsOneWidget);
   });
 }

@@ -13,7 +13,7 @@ class AppLocalizations {
   static const _strings = <String, Map<String, String>>{
     'en': {
       // General
-      'appTitle': 'SoulPing Care',
+      'appTitle': 'Mizan',
       'cancel': 'Cancel',
       'save': 'Save',
       'retry': 'Retry',
@@ -126,16 +126,16 @@ class AppLocalizations {
       'monitorOnSub': 'Active — watching for activity',
       'monitorOffSub': 'Turn on for an extra safety layer',
       'monitorExplain':
-          'When ON, SoulPing Care quietly watches for phone activity. If it notices no activity for a long time, it will check on you first before alerting your contact.',
+          'When ON, Mizan quietly watches for phone activity. If it notices no activity for a long time, it will check on you first before alerting your contact.',
       'monitorPermNotifOk': 'Notifications allowed',
       'monitorPermNotifMissing': 'Please allow notifications',
       'monitorPermBatteryOk': 'Battery optimization disabled',
       'monitorPermBatteryMissing': 'Please disable battery optimization',
-      'monitorNotifTitle': 'SoulPing Care is keeping you safe',
+      'monitorNotifTitle': 'Mizan is keeping you safe',
       'monitorNotifBody': 'Background safety check is active.',
       'monitorChannelName': 'Safety Monitor',
       'monitorChannelDesc':
-          'Keeps the background safety monitor running so SoulPing Care can detect inactivity.',
+          'Keeps the background safety monitor running so Mizan can detect inactivity.',
       'monitorNotifPermissionRequired':
           'Notification permission is required to keep you safe.',
       'monitorCouldNotStart':
@@ -143,7 +143,7 @@ class AppLocalizations {
     },
     'ar': {
       // General
-      'appTitle': 'SoulPing Care',
+      'appTitle': 'Mizan',
       'cancel': 'إلغاء',
       'save': 'حفظ',
       'retry': 'إعادة المحاولة',
@@ -256,16 +256,16 @@ class AppLocalizations {
       'monitorOnSub': 'نشط — يراقب النشاط',
       'monitorOffSub': 'فعّله لطبقة حماية إضافية',
       'monitorExplain':
-          'عند التفعيل، يراقب SoulPing Care نشاط الهاتف بهدوء. إذا لم يلاحظ أي نشاط لفترة طويلة، سيطمئن عليك أولاً قبل تنبيه جهة الاتصال.',
+          'عند التفعيل، يراقب Mizan نشاط الهاتف بهدوء. إذا لم يلاحظ أي نشاط لفترة طويلة، سيطمئن عليك أولاً قبل تنبيه جهة الاتصال.',
       'monitorPermNotifOk': 'الإشعارات مسموح بها',
       'monitorPermNotifMissing': 'يرجى السماح بالإشعارات',
       'monitorPermBatteryOk': 'تم تعطيل تحسين البطارية',
       'monitorPermBatteryMissing': 'يرجى تعطيل تحسين البطارية',
-      'monitorNotifTitle': 'SoulPing Care يحافظ على سلامتك',
+      'monitorNotifTitle': 'Mizan يحافظ على سلامتك',
       'monitorNotifBody': 'فحص الأمان في الخلفية نشط.',
       'monitorChannelName': 'مراقب الأمان',
       'monitorChannelDesc':
-          'يبقي مراقب الأمان في الخلفية يعمل حتى يتمكن SoulPing Care من اكتشاف الخمول.',
+          'يبقي مراقب الأمان في الخلفية يعمل حتى يتمكن Mizan من اكتشاف الخمول.',
       'monitorNotifPermissionRequired':
           'إذن الإشعارات مطلوب للحفاظ على سلامتك.',
       'monitorCouldNotStart': 'تعذر بدء مراقب الأمان. يرجى المحاولة مرة أخرى.',
