@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -27,13 +29,19 @@ class BlockedOperation implements Exception {
 }
 
 class AppState extends ChangeNotifier {
-  AppState({LocalStore? store}) : _store = store ?? LocalStore();
+  AppState({DocumentStore? store}) : _store = store ?? LocalStore() {
+    _store.syncStatus.addListener(_notifySyncStatusChanged);
+  }
 
-  final LocalStore _store;
+  final DocumentStore _store;
   static const _engine = FocusEngine();
+  StreamSubscription<Map<String, Object?>>? _storeSubscription;
 
   bool _ready = false;
   bool get isReady => _ready;
+  String? get accountEmail => _store.accountEmail;
+  bool get isCloudBacked => _store.isCloudBacked;
+  SyncStatus get syncStatus => _store.syncStatus.value;
 
   final List<Task> _tasks = [];
   final List<Goal> _goals = [];
@@ -67,7 +75,8 @@ class AppState extends ChangeNotifier {
     final list = _workouts
         .where((w) => !w.isTemplate && w.type == type)
         .toList()
-      ..sort((a, b) => (b.date ?? b.createdAt).compareTo(a.date ?? a.createdAt));
+      ..sort(
+          (a, b) => (b.date ?? b.createdAt).compareTo(a.date ?? a.createdAt));
     return list;
   }
 
@@ -75,17 +84,16 @@ class AppState extends ChangeNotifier {
       _workouts.where((w) => w.isTemplate && w.type == type).toList();
 
   List<Exercise> exercisesOfType(WorkoutType type) {
-    final list = _exercises
-        .where((e) => !e.isArchived && e.type == type)
-        .toList()
-      ..sort((a, b) {
-        final al = a.lastUsedAt;
-        final bl = b.lastUsedAt;
-        if (al == null && bl == null) return a.name.compareTo(b.name);
-        if (al == null) return 1;
-        if (bl == null) return -1;
-        return bl.compareTo(al);
-      });
+    final list =
+        _exercises.where((e) => !e.isArchived && e.type == type).toList()
+          ..sort((a, b) {
+            final al = a.lastUsedAt;
+            final bl = b.lastUsedAt;
+            if (al == null && bl == null) return a.name.compareTo(b.name);
+            if (al == null) return 1;
+            if (bl == null) return -1;
+            return bl.compareTo(al);
+          });
     return list;
   }
 
@@ -328,8 +336,8 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
-  bool exerciseHasHistory(String id) => _workouts.any(
-      (w) => !w.isTemplate && w.exercises.any((e) => e.exerciseId == id));
+  bool exerciseHasHistory(String id) => _workouts
+      .any((w) => !w.isTemplate && w.exercises.any((e) => e.exerciseId == id));
 
   /// Blocked while history references it. Deleting "Back squat" with eight
   /// workouts behind it would erase the chart it took months to build.
@@ -544,7 +552,8 @@ class AppState extends ChangeNotifier {
     await saveWorkout(w.copyWith(exercises: list));
   }
 
-  Future<void> reorderExercise(String workoutId, int oldIndex, int newIndex) async {
+  Future<void> reorderExercise(
+      String workoutId, int oldIndex, int newIndex) async {
     final w = _requireWorkout(workoutId);
     final list = List<WorkoutExercise>.of(w.exercises);
     if (oldIndex < 0 || oldIndex >= list.length) return;
@@ -678,7 +687,9 @@ class AppState extends ChangeNotifier {
     // archived, so past sessions keep their names.
     for (final old in _exercises) {
       if (library.any((k) => k.id == old.id)) continue;
-      if (exerciseHasHistory(old.id)) library.add(old.copyWith(isArchived: true));
+      if (exerciseHasHistory(old.id)) {
+        library.add(old.copyWith(isArchived: true));
+      }
     }
 
     _exercises
@@ -719,7 +730,7 @@ class AppState extends ChangeNotifier {
     _focusPillars = [];
     _notionImported = false;
     _trainingPlanImported = false;
-    await _store.clear();
+    await _store.save(_document());
     notifyListeners();
   }
 
@@ -727,7 +738,37 @@ class AppState extends ChangeNotifier {
 
   Future<void> load() async {
     final doc = await _store.load();
+    _applyDocument(doc);
 
+    // First launch on a clean install: start from the real workspace
+    // rather than an empty shell. A saved empty document is intentional.
+    if (doc.isEmpty && !_notionImported) {
+      try {
+        await importNotionSnapshot();
+      } on Exception {
+        // A missing or malformed asset must never stop the app opening.
+        _notionImported = true;
+      }
+    }
+
+    if (doc.isEmpty && _exercises.isEmpty && !_trainingPlanImported) {
+      try {
+        await importTrainingPlan();
+      } on Exception {
+        _trainingPlanImported = true;
+      }
+    }
+
+    _ready = true;
+    notifyListeners();
+
+    _storeSubscription = _store.changes.listen((remoteDocument) {
+      _applyDocument(remoteDocument);
+      notifyListeners();
+    });
+  }
+
+  void _applyDocument(Map<String, Object?> doc) {
     _tasks
       ..clear()
       ..addAll(_list(doc['tasks']).map(Task.fromJson));
@@ -760,29 +801,6 @@ class AppState extends ChangeNotifier {
 
     _notionImported = (doc['notion_imported'] as bool?) ?? false;
     _trainingPlanImported = (doc['training_plan_imported'] as bool?) ?? false;
-
-    // First launch on a clean install: start from the real workspace
-    // rather than an empty shell.
-    final isBlank = _tasks.isEmpty && _goals.isEmpty && _workouts.isEmpty;
-    if (isBlank && !_notionImported) {
-      try {
-        await importNotionSnapshot();
-      } on Exception {
-        // A missing or malformed asset must never stop the app opening.
-        _notionImported = true;
-      }
-    }
-
-    if (_exercises.isEmpty && !_trainingPlanImported) {
-      try {
-        await importTrainingPlan();
-      } on Exception {
-        _trainingPlanImported = true;
-      }
-    }
-
-    _ready = true;
-    notifyListeners();
   }
 
   Map<String, Object?> _document() => {
@@ -809,6 +827,17 @@ class AppState extends ChangeNotifier {
       ((v as List?) ?? const [])
           .map((e) => Map<String, Object?>.from(e as Map))
           .toList();
+
+  void _notifySyncStatusChanged() => notifyListeners();
+
+  @override
+  void dispose() {
+    final subscription = _storeSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
+    _store.syncStatus.removeListener(_notifySyncStatusChanged);
+    _store.dispose();
+    super.dispose();
+  }
 }
 
 String _defaultTitle(WorkoutType type) => switch (type) {

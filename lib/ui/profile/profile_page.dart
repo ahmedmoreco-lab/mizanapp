@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/local_store.dart';
 import '../../models/pillar.dart';
 import '../../state/app_state.dart';
 import '../../theme/tokens.dart';
@@ -23,7 +25,6 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(Sp.x20, Sp.x8, Sp.x20, Sp.x24),
       children: [
         const ScreenTitle('Profile'),
-
         const SectionLabel('Streak'),
         AppCard(
           child: Column(
@@ -53,7 +54,6 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
         ),
-
         const SectionLabel('Totals'),
         Row(
           children: [
@@ -65,15 +65,15 @@ class ProfilePage extends StatelessWidget {
             Expanded(child: _Stat(value: stats.thisMonth, label: 'This month')),
           ],
         ),
-
         const SectionLabel('Settings'),
         _SettingsList(
           children: [
             _SettingRow(
               title: 'Pillars',
-              subtitle: '$onCount of ${Pillar.values.length} feed daily suggestions',
-              trailing: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: t.faint),
+              subtitle:
+                  '$onCount of ${Pillar.values.length} feed daily suggestions',
+              trailing:
+                  Icon(Icons.chevron_right_rounded, size: 18, color: t.faint),
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const PillarsPage()),
               ),
@@ -90,42 +90,53 @@ class ProfilePage extends StatelessWidget {
               subtitle: 'Not in v1 — decide once the habit sticks',
               enabled: false,
             ),
-            const _SettingRow(
-              title: 'Data',
-              subtitle: 'On this device · cloud sync not set up',
+            _SettingRow(
+              title: 'Cloud sync',
+              subtitle: _syncLabel(app.syncStatus),
+              trailing: Icon(
+                _syncIcon(app.syncStatus),
+                size: 18,
+                color:
+                    app.syncStatus == SyncStatus.offline ? t.danger : t.faint,
+              ),
+            ),
+            _SettingRow(
+              title: app.accountEmail ?? 'Account',
+              subtitle: 'Signed in',
+              trailing: Icon(Icons.logout_rounded, size: 18, color: t.faint),
+              onTap: () => _signOut(context),
             ),
             _SettingRow(
               title: 'Re-import from Notion',
               subtitle: app.hasImportedNotion
                   ? 'Replaces goals and tasks with the bundled snapshot'
                   : 'Load the HI Ahmed snapshot — 7 goals, 18 tasks',
-              trailing: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: t.faint),
+              trailing:
+                  Icon(Icons.chevron_right_rounded, size: 18, color: t.faint),
               onTap: () => _reimport(context),
             ),
             _SettingRow(
               title: 'Re-import training plan',
               subtitle: 'Replaces templates and the exercise library',
-              trailing: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: t.faint),
+              trailing:
+                  Icon(Icons.chevron_right_rounded, size: 18, color: t.faint),
               onTap: () => _reimportPlan(context),
             ),
             _SettingRow(
               title: 'Export everything',
               subtitle: 'Copies your full JSON to the clipboard',
-              trailing: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: t.faint),
+              trailing:
+                  Icon(Icons.chevron_right_rounded, size: 18, color: t.faint),
               onTap: () => _export(context),
             ),
             _SettingRow(
               title: 'Erase everything',
-              subtitle: 'Wipes this device. There is no undo.',
+              subtitle: 'Wipes this account on every device. There is no undo.',
               danger: true,
               onTap: () => _erase(context),
             ),
           ],
         ),
-
         const SizedBox(height: Sp.x20),
         Center(
           child: Text('Ahmed OS · v1.0.0',
@@ -211,7 +222,8 @@ class ProfilePage extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Erase everything?'),
         content: const Text(
-            'Every task, goal and workout on this device. Export first if you want a copy.'),
+            'Every task, goal and workout in this account on every device. '
+            'Export first if you want a copy.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -226,6 +238,42 @@ class ProfilePage extends StatelessWidget {
     );
     if (ok == true) await app.eraseEverything();
   }
+
+  Future<void> _signOut(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text(
+            'Your data stays in Firebase and will be here when you sign in again.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await FirebaseAuth.instance.signOut();
+  }
+
+  String _syncLabel(SyncStatus status) => switch (status) {
+        SyncStatus.syncing => 'Saving changes...',
+        SyncStatus.synced => 'Saved to Firebase',
+        SyncStatus.offline => 'Offline - changes remain on this device',
+        SyncStatus.localOnly => 'Saved on this device',
+      };
+
+  IconData _syncIcon(SyncStatus status) => switch (status) {
+        SyncStatus.syncing => Icons.sync_rounded,
+        SyncStatus.synced => Icons.cloud_done_outlined,
+        SyncStatus.offline => Icons.cloud_off_outlined,
+        SyncStatus.localOnly => Icons.phone_android_rounded,
+      };
 }
 
 class _WeekStrip extends StatelessWidget {
@@ -288,8 +336,7 @@ class _Stat extends StatelessWidget {
         children: [
           Text('$value', style: AppType.statNumber.copyWith(color: t.ink)),
           const SizedBox(height: 1),
-          Text(label,
-              style: manrope(size: 11.5, weight: 600, color: t.muted)),
+          Text(label, style: manrope(size: 11.5, weight: 600, color: t.muted)),
         ],
       ),
     );
@@ -351,8 +398,8 @@ class _SettingRow extends StatelessWidget {
       child: InkWell(
         onTap: enabled ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: Sp.x14, vertical: Sp.x14),
+          padding:
+              const EdgeInsets.symmetric(horizontal: Sp.x14, vertical: Sp.x14),
           child: Row(
             children: [
               Expanded(

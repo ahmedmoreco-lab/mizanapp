@@ -4,7 +4,11 @@ Daily focus, goals, training log. Four tabs, one loop, nothing else.
 
 ## Run it
 
-Requires **Flutter 3.27 or newer** (`flutter --version`).
+The deployed web app is available at:
+
+https://mizan-app-7fa3f.web.app
+
+For local development, use **Flutter 3.27 or newer** (`flutter --version`):
 
 ```bash
 flutter pub get
@@ -29,26 +33,22 @@ flutter analyze
 flutter test
 ```
 
-> This code was written without a Flutter toolchain available, so it has not
-> been compiled. `flutter analyze` is the first thing to run — if anything is
-> off, it will be a missing import or a signature nit, not a design problem.
-
 ## Where the data lives
 
-Everything is one JSON document on the device, written through
-`shared_preferences` (`lib/data/local_store.dart`). That is a deliberate v1
-choice, not a shortcut:
+Each email/password account owns one JSON document in Cloud Firestore. The
+document is also cached with `shared_preferences`, under a key namespaced by
+Firebase user ID, so accounts cannot read each other's device cache.
 
-- The same build runs on Chrome, Windows, Android and iOS with nothing to
-  install — no native database plugin, no `sqlite3.wasm`, no platform config.
-- Volumes here are hundreds of records, so in-memory filtering is faster than
-  a query planner would be.
-- The schema is exactly the one in the design handoff. Moving to SQLite or
-  Supabase later means replacing that one file; the models, logic and UI
-  above it do not change.
+- Local writes happen first, so temporary connection loss does not discard an
+  edit. Pending changes are sent when Firestore reconnects.
+- Firestore security rules only allow an authenticated user to read or write
+  `users/{their-user-id}/state/app`.
+- The first account used on an upgraded device claims the old device-only
+  document once, then the legacy copy is removed.
 
 Profile → Export everything copies the whole document as JSON. Profile →
-Erase everything wipes it.
+Erase everything replaces the synced document with a blank one on every
+device.
 
 ## Layout
 
@@ -105,7 +105,6 @@ There is never a validation error to show.
 
 ## Not in v1, on purpose
 
-Accounts, cloud sync, push notifications, XP, levels, badges, a web build
-you would have to maintain, and any external integration. The next honest
-step is Supabase sync behind `LocalStore` — once the app has earned it by
-being opened every day for a few weeks.
+Push notifications, XP, levels, badges, and external integrations remain out
+of scope. Accounts and cloud sync use Firebase Authentication and Firestore;
+the web build is published with Firebase Hosting.

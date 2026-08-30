@@ -3,6 +3,8 @@
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+firebase-debug.log
+.firebase/
 *.iml
 .idea/
 .vscode/
