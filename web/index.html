@@ -21,9 +21,35 @@
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #F4F5F6; }
     @media (prefers-color-scheme: dark) { html, body { background: #0F1113; } }
+    .load-error {
+      box-sizing: border-box;
+      display: grid;
+      place-content: center;
+      min-height: 100%;
+      padding: 24px;
+      color: #202428;
+      font: 600 16px/1.5 system-ui, sans-serif;
+      text-align: center;
+    }
+    .load-error h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
+    .load-error p { margin: 8px 0 20px; color: #687078; font-weight: 400; }
+    .load-error button {
+      min-height: 44px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 6px;
+      background: #202428;
+      color: #FFFFFF;
+      font: inherit;
+    }
+    @media (prefers-color-scheme: dark) {
+      .load-error { color: #F1F3F4; }
+      .load-error p { color: #A4ABB2; }
+      .load-error button { background: #F1F3F4; color: #202428; }
+    }
   </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script type="module" src="firebase_loader.js"></script>
 </body>
 </html>
