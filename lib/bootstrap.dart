@@ -48,22 +48,37 @@ class _AhmedOsBootstrapState extends State<AhmedOsBootstrap> {
           options: DefaultFirebaseOptions.currentPlatform,
         ).timeout(const Duration(seconds: 20));
       }
-      if (!mounted) return;
-      setState(() => _firebaseReady = true);
-      await _authSubscription?.cancel();
-      _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
-        _handleUser,
-        onError: (Object error) {
-          if (mounted) setState(() => _firebaseError = error);
-        },
-      );
+      await _connectAuth();
     } catch (error) {
+      var reportedError = error;
+      if (Firebase.apps.isNotEmpty) {
+        try {
+          await _connectAuth();
+          return;
+        } catch (fallbackError) {
+          reportedError = fallbackError;
+        }
+      }
       if (!mounted) return;
       setState(() {
-        _firebaseError = error;
+        _firebaseError = reportedError;
         _sessionLoading = false;
       });
     }
+  }
+
+  Future<void> _connectAuth() async {
+    final auth = FirebaseAuth.instance;
+    await _authSubscription?.cancel();
+    _authSubscription = auth.authStateChanges().listen(
+      _handleUser,
+      onError: (Object error) {
+        if (mounted) setState(() => _firebaseError = error);
+      },
+    );
+    if (!mounted) return;
+    setState(() => _firebaseReady = true);
+    await _handleUser(auth.currentUser);
   }
 
   Future<void> _handleUser(User? user) async {
@@ -112,7 +127,7 @@ class _AhmedOsBootstrapState extends State<AhmedOsBootstrap> {
       return _BootstrapMaterial(
         child: _StatusPage(
           title: 'Could not connect',
-          message: 'Check your connection and try again.',
+          message: _firebaseErrorMessage(_firebaseError!),
           actionLabel: 'Retry',
           onAction: _initializeFirebase,
         ),
@@ -146,6 +161,20 @@ class _AhmedOsBootstrapState extends State<AhmedOsBootstrap> {
       value: _appState!,
       child: const AhmedOsApp(),
     );
+  }
+
+  String _firebaseErrorMessage(Object error) {
+    if (error is TimeoutException) {
+      return 'Firebase startup timed out. Check your connection and retry.';
+    }
+    if (error is FirebaseException) {
+      return '${error.plugin}/${error.code}: '
+          '${error.message ?? 'Firebase could not start.'}';
+    }
+    final detail = error.toString();
+    final shortened =
+        detail.length > 180 ? '${detail.substring(0, 180)}...' : detail;
+    return 'Firebase could not start: $shortened';
   }
 
   @override
