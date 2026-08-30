@@ -3,7 +3,7 @@ async function startApp() {
     const [core, auth, firestore] = await Promise.all([
       import('./firebase/firebase-app.js'),
       import('./firebase/firebase-auth.js'),
-      import('./firebase/firebase-firestore-pipelines.js'),
+      import('./firebase/firebase-firestore.js'),
     ]);
 
     window.firebase_core = core;
