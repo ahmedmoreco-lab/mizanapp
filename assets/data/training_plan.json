@@ -1,0 +1,666 @@
+{
+  "name": "Training cycle — 3-set cap · performance legs · both HYROX versions",
+  "source": "Training_Cycle_Final.docx, imported 30 Aug 2026",
+  "exercises": [
+    {
+      "id": "ex-handstand",
+      "name": "Freestanding handstand",
+      "type": "skills",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-hspu",
+      "name": "Strict HSPU",
+      "type": "skills",
+      "is_tracked": true,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-high-pullup",
+      "name": "Explosive high pull-up",
+      "type": "skills",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-transition",
+      "name": "Feet-assisted low-bar transition",
+      "type": "skills",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-banded-mu",
+      "name": "Banded muscle-up",
+      "type": "skills",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-bench",
+      "name": "Bench press",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-dips",
+      "name": "Weighted dips",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-db-lat-raise",
+      "name": "DB lateral raise",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-cable-lat-raise",
+      "name": "Cable lateral raise",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-hollow-rocks",
+      "name": "Hollow body rocks",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-squat",
+      "name": "Back squat — full depth",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-rdl",
+      "name": "RDL",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-leg-ext",
+      "name": "Seated leg extension",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-leg-curl",
+      "name": "Seated/lying leg curl",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-rev-nordic",
+      "name": "Banded reverse nordic",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-back-ext",
+      "name": "Weighted back extension",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-calf",
+      "name": "Seated calf raise",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-wtd-pullup",
+      "name": "Weighted pull-up",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-bb-row",
+      "name": "Barbell row",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-hanging-leg-raise",
+      "name": "Hanging leg raise — tempo",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-incline-db",
+      "name": "Incline DB press",
+      "type": "strength",
+      "is_tracked": true,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-cs-row",
+      "name": "Chest-supported row",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-lat-pulldown",
+      "name": "Lat pulldown / straight-arm pulldown",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-face-pull",
+      "name": "Face pull",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-incline-curl",
+      "name": "Incline pronated curl",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-oh-ext",
+      "name": "Overhead cable extension",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-hollow-hold",
+      "name": "Hollow hold variations",
+      "type": "strength",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-social-run",
+      "name": "Social run",
+      "type": "running",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-row-500",
+      "name": "500 m row",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-db-thrusters",
+      "name": "DB thrusters",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-burpee-bj",
+      "name": "Burpee broad jumps",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-sim-run",
+      "name": "1 km run — sim leg",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-ski-row",
+      "name": "400 m SkiErg + 500 m row",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-thruster-row",
+      "name": "20 DB thrusters + 20 bent rows",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    },
+    {
+      "id": "ex-carry-lunge-wb",
+      "name": "120 m carry + 60 lunges + 50 wall balls",
+      "type": "conditioning",
+      "is_tracked": false,
+      "is_archived": false,
+      "last_used_at": null
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl-push",
+      "type": "strength",
+      "title": "Saturday · Push + Handstand",
+      "date": null,
+      "duration_min": null,
+      "notes": "Skill first while fresh · ~50 min. Wrist protocol before anything: wrist circles, palm-down rocks, fingers-back rocks, fist rocks — 10 each. Parallettes if anything pinches.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-push-0",
+          "exercise_id": "ex-handstand",
+          "order_index": 0,
+          "notes": "A · SKILL · 8–10 min · you hit 8s — next target 12–15s. Chase balance time, not reps",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-1",
+          "exercise_id": "ex-hspu",
+          "order_index": 1,
+          "notes": "B · SKILL · 4 × 3–4 · keeps 4 sets · at 4×4 now, add a rep before adding sets",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-2",
+          "exercise_id": "ex-bench",
+          "order_index": 2,
+          "notes": "C · 3 × 6–8 · 75–77.5 kg · 1 RIR",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-3",
+          "exercise_id": "ex-dips",
+          "order_index": 3,
+          "notes": "D · 3 × 6–8 · 25–27.5 kg belt",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-4",
+          "exercise_id": "ex-db-lat-raise",
+          "order_index": 4,
+          "notes": "E1 · 3 × 12–15 · 10–12 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-5",
+          "exercise_id": "ex-cable-lat-raise",
+          "order_index": 5,
+          "notes": "E2 · 3 × 12–15 · 7.5 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-push-6",
+          "exercise_id": "ex-hollow-rocks",
+          "order_index": 6,
+          "notes": "F · 3 × 20–30s · progress difficulty, not duration",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-lower",
+      "type": "strength",
+      "title": "Lower · performance",
+      "date": null,
+      "duration_min": null,
+      "notes": "Sunday (standard) / Tuesday (sim weeks) · ~40 min. Built for running and HYROX, not size — leg press removed. On sim weeks drop one set from the squat only; isolation work survives tired legs better than heavy compounds.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-lower-0",
+          "exercise_id": "ex-squat",
+          "order_index": 0,
+          "notes": "A · 3 × 8–10 · 70–72.5 kg · depth is non-negotiable — drop load before you drop depth",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-1",
+          "exercise_id": "ex-rdl",
+          "order_index": 1,
+          "notes": "B · 3 × 8–10 · 85–90 kg · posterior chain for running",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-2",
+          "exercise_id": "ex-leg-ext",
+          "order_index": 2,
+          "notes": "C · 3 × 10–12 · 85–90 kg · your one kept isolation piece",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-3",
+          "exercise_id": "ex-leg-curl",
+          "order_index": 3,
+          "notes": "D1 · 3 × 10–12 · 54–57 kg · hamstring strength = injury prevention",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-4",
+          "exercise_id": "ex-rev-nordic",
+          "order_index": 4,
+          "notes": "D2 · 3 × 8–10 · knee health",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-5",
+          "exercise_id": "ex-back-ext",
+          "order_index": 5,
+          "notes": "E · 3 × 10–12 · 10–12.5 kg · running posture under fatigue",
+          "sets": []
+        },
+        {
+          "id": "tpl-lower-6",
+          "exercise_id": "ex-calf",
+          "order_index": 6,
+          "notes": "F · 3 × 15–20 · 40–42.5 kg",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-pull",
+      "type": "strength",
+      "title": "Monday · Pull",
+      "date": null,
+      "duration_min": null,
+      "notes": "~45 min · transition drill lives on Wednesday now. High pull-up is your leading indicator: when bar contact moves from upper chest toward sternum, the strict muscle-up is close. Do not add load — accumulate clean explosive attempts.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-pull-0",
+          "exercise_id": "ex-high-pullup",
+          "order_index": 0,
+          "notes": "A · SKILL · 5 × 3 · keeps 5 sets · dead hang, no swing · chase sternum contact",
+          "sets": []
+        },
+        {
+          "id": "tpl-pull-1",
+          "exercise_id": "ex-banded-mu",
+          "order_index": 1,
+          "notes": "B · 3 × 3–4 · use the band that lets you feel the movement — do not chase a thinner band under fatigue",
+          "sets": []
+        },
+        {
+          "id": "tpl-pull-2",
+          "exercise_id": "ex-wtd-pullup",
+          "order_index": 2,
+          "notes": "C · 3 × 5–6 · 12.5–15 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-pull-3",
+          "exercise_id": "ex-bb-row",
+          "order_index": 3,
+          "notes": "D · 3 × 8–10 · 45–50 kg + bar",
+          "sets": []
+        },
+        {
+          "id": "tpl-pull-4",
+          "exercise_id": "ex-hanging-leg-raise",
+          "order_index": 4,
+          "notes": "E · 3 × 5–6 · 3s lowering · control before reps",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-hyrox-lite",
+      "type": "conditioning",
+      "title": "Wednesday · HYROX-lite + muscle-up drill",
+      "date": null,
+      "duration_min": null,
+      "notes": "Standard weeks · ~40 min. Run at ~85% effort except when testing monthly. Benchmark to beat: 15:15. On full-sim weeks do the transition drill only and skip the conditioning (~15 min). Set the workout duration from the ⋮ menu — that is what the chart plots.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-hyrox-lite-0",
+          "exercise_id": "ex-transition",
+          "order_index": 0,
+          "notes": "A · SKILL · 3 × 4–5 · do this FIRST while fresh · bar at chest/hip height · walk feet OUT to progress, not more reps · slow the transition",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-lite-1",
+          "exercise_id": "ex-row-500",
+          "order_index": 1,
+          "notes": "1 · 3 rounds for time · 500 m · steady pace",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-lite-2",
+          "exercise_id": "ex-db-thrusters",
+          "order_index": 2,
+          "notes": "2 · 10 reps · 17.5–18 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-lite-3",
+          "exercise_id": "ex-burpee-bj",
+          "order_index": 3,
+          "notes": "3 · 10 reps · rhythm over speed",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-hyrox-sim",
+      "type": "conditioning",
+      "title": "Full HYROX simulation",
+      "date": null,
+      "duration_min": null,
+      "notes": "Every 2nd–3rd week · Sunday · ~50 min. Competition rehearsal — target ~49:00 with the row included. Never run a full sim on tired legs: if Saturday was heavy or Friday’s run was hard, do the lite version instead. Set the workout duration from the ⋮ menu.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-hyrox-sim-0",
+          "exercise_id": "ex-sim-run",
+          "order_index": 0,
+          "notes": "1 · 4:40 · easy entry · 6/10 effort · resist the adrenaline",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-1",
+          "exercise_id": "ex-ski-row",
+          "order_index": 1,
+          "notes": "2 · ~3:40 · ski FIRST (technique-dependent) · row 1:50–1:55 /500 m · damper 4–5",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-2",
+          "exercise_id": "ex-sim-run",
+          "order_index": 2,
+          "notes": "3 · ~5:00 · shake arms out over the first 100 m",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-3",
+          "exercise_id": "ex-thruster-row",
+          "order_index": 3,
+          "notes": "4 · 3:00 · 17.5–18 kg · thrusters unbroken if possible",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-4",
+          "exercise_id": "ex-sim-run",
+          "order_index": 4,
+          "notes": "5 · 5:01 · CHECK-IN · above 5:20 means fatigue is ahead of plan — back off station 6",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-5",
+          "exercise_id": "ex-burpee-bj",
+          "order_index": 5,
+          "notes": "6 · 35 reps · 2:00 · your strongest station · protect jump distance",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-6",
+          "exercise_id": "ex-sim-run",
+          "order_index": 6,
+          "notes": "7 · 5:00 · hardest mental run · slow the first 300 m, then build",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-7",
+          "exercise_id": "ex-carry-lunge-wb",
+          "order_index": 7,
+          "notes": "8 · 8:30 · 10 kg lunges, 6 kg wall balls · break wall balls into blocks of 10 · this is where the time is won or lost",
+          "sets": []
+        },
+        {
+          "id": "tpl-hyrox-sim-8",
+          "exercise_id": "ex-sim-run",
+          "order_index": 8,
+          "notes": "9 · 4:50 · empty the tank",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-upper",
+      "type": "strength",
+      "title": "Thursday · Upper hypertrophy + core",
+      "date": null,
+      "duration_min": null,
+      "notes": "Zero leg load · ~40 min. Protects Friday’s run.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-upper-0",
+          "exercise_id": "ex-incline-db",
+          "order_index": 0,
+          "notes": "A · 3 × 8–10 · 30–32 kg · YOUR EARLY-WARNING LIFT — it dipped 9→8 reps at 32 kg before you felt broken. If it drops again while other lifts climb, take an easy week",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-1",
+          "exercise_id": "ex-cs-row",
+          "order_index": 1,
+          "notes": "B · 3 × 10–12 · 50 kg · T-bar or machine",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-2",
+          "exercise_id": "ex-lat-pulldown",
+          "order_index": 2,
+          "notes": "C · 3 × 10–12 · 27–30 kg · 2s squeeze",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-3",
+          "exercise_id": "ex-db-lat-raise",
+          "order_index": 3,
+          "notes": "D1 · 3 × 12–15 · 12 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-4",
+          "exercise_id": "ex-face-pull",
+          "order_index": 4,
+          "notes": "D2 · 3 × 15 · 20–22.5 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-5",
+          "exercise_id": "ex-incline-curl",
+          "order_index": 5,
+          "notes": "E1 · 3 × 10–12 · 12–14 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-6",
+          "exercise_id": "ex-oh-ext",
+          "order_index": 6,
+          "notes": "E2 · 3 × 10–12 · 17.5–20 kg",
+          "sets": []
+        },
+        {
+          "id": "tpl-upper-7",
+          "exercise_id": "ex-hollow-hold",
+          "order_index": 7,
+          "notes": "F · 3 sets · weighted hold or rocks · 30–40s",
+          "sets": []
+        }
+      ]
+    },
+    {
+      "id": "tpl-friday-run",
+      "type": "running",
+      "title": "Friday · Social run",
+      "date": null,
+      "duration_min": null,
+      "notes": "Protected. 5–8 km, easy and social. Two clear days since the last leg session on sim weeks.",
+      "template_id": null,
+      "is_template": true,
+      "created_at": 1788048000000,
+      "exercises": [
+        {
+          "id": "tpl-friday-run-0",
+          "exercise_id": "ex-social-run",
+          "order_index": 0,
+          "notes": "5–8 km · protected · do not turn this into a session",
+          "sets": []
+        }
+      ]
+    }
+  ]
+}
