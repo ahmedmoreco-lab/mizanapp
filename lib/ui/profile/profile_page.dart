@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/local_store.dart';
+import '../../data/notion_sync.dart';
 import '../../models/pillar.dart';
 import '../../state/app_state.dart';
 import '../../theme/tokens.dart';
@@ -110,6 +111,13 @@ class ProfilePage extends StatelessWidget {
               onTap: () => _signOut(context),
             ),
             _SettingRow(
+              title: 'Sync from Notion',
+              subtitle: 'Adds and updates tasks. Nothing here is deleted.',
+              trailing:
+                  Icon(Icons.chevron_right_rounded, size: 18, color: t.faint),
+              onTap: () => _syncNotion(context),
+            ),
+            _SettingRow(
               title: 'Re-import from Notion',
               subtitle: app.hasImportedNotion
                   ? 'Replaces goals and tasks with the bundled snapshot'
@@ -147,6 +155,71 @@ class ProfilePage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Paste a Notion export and merge it in. Additive by design: this
+  /// can add and update, but never removes a task and never un-ticks
+  /// one, so a bad paste costs a moment rather than a day's work.
+  Future<void> _syncNotion(BuildContext context) async {
+    final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController();
+
+    final payload = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sync from Notion'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+                'Paste the export. Tasks from Notion are added or updated; '
+                'anything you captured here, and anything you have ticked '
+                'off, is left alone.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 6,
+              minLines: 4,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: '{ "tasks": [ ... ] }',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final data = await Clipboard.getData(Clipboard.kTextPlain);
+              controller.text = data?.text ?? '';
+            },
+            child: const Text('Paste'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Sync'),
+          ),
+        ],
+      ),
+    );
+
+    if (payload == null || payload.trim().isEmpty) return;
+
+    try {
+      final result = await app.syncFromNotion(payload);
+      messenger.showSnackBar(SnackBar(content: Text(result.summary)));
+    } on FormatException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text("That did not read as a Notion export. ${e.message}")),
+      );
+    }
   }
 
   Future<void> _reimport(BuildContext context) async {

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/local_store.dart';
 import '../data/notion_import.dart';
+import '../data/notion_sync.dart';
 import '../data/training_plan.dart';
 import '../logic/focus_engine.dart';
 import '../logic/progress.dart';
@@ -643,6 +644,27 @@ class AppState extends ChangeNotifier {
 
     await _persist();
     return snapshot.goals.length + snapshot.tasks.length;
+  }
+
+  /// Merge a Notion export into the tasks already here.
+  ///
+  /// Unlike [importNotionSnapshot], which replaces, this keeps what the
+  /// app owns: tasks captured here are untouched, completions here are
+  /// never undone, and nothing is deleted. Throws [FormatException] if
+  /// the payload will not parse — the caller shows that to the user.
+  Future<NotionMergeResult> syncFromNotion(String payload) async {
+    final incoming = parseNotionTasks(payload);
+    final result = mergeNotionTasks(existing: _tasks, incoming: incoming);
+
+    if (result.changedAnything) {
+      _tasks
+        ..clear()
+        ..addAll(result.tasks);
+      await _persist();
+      notifyListeners();
+    }
+
+    return result;
   }
 
   /// Replaces the exercise library and the workout templates with the
