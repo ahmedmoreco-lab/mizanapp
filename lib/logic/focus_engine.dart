@@ -47,23 +47,7 @@ class FocusEngine {
     final today = _midnight(now ?? DateTime.now());
     if (eligible.isEmpty) return const [];
 
-    final lastTouched = <Pillar, DateTime>{};
-    void touch(Pillar p, DateTime? when) {
-      if (when == null) return;
-      final d = _midnight(when);
-      final existing = lastTouched[p];
-      if (existing == null || d.isAfter(existing)) lastTouched[p] = d;
-    }
-
-    for (final t in tasks) {
-      final p = t.pillar;
-      if (p == null) continue;
-      touch(p, t.completedAt);
-    }
-    for (final w in workouts) {
-      if (w.isTemplate) continue;
-      touch(Pillar.training, w.date);
-    }
+    final lastTouched = lastTouchedByPillar(tasks, workouts);
 
     final gaps = <Pillar, int?>{};
     for (final p in eligible) {
@@ -154,3 +138,76 @@ class FocusEngine {
 }
 
 DateTime _midnight(DateTime d) => DateTime(d.year, d.month, d.day);
+
+
+/// How long a pillar has gone untouched. The Home screen shows the worst
+/// one or two as a single line — the whole of what the pillar cards used
+/// to say, at a fraction of the space.
+class PillarNeglect {
+  const PillarNeglect({required this.pillar, required this.days});
+
+  final Pillar pillar;
+
+  /// Days since anything happened, or null if nothing ever has.
+  final int? days;
+
+  bool get never => days == null;
+}
+
+/// The most recent day each pillar saw activity: a task completed, or a
+/// workout logged. Templates never count as training.
+Map<Pillar, DateTime> lastTouchedByPillar(
+  List<Task> tasks,
+  List<Workout> workouts,
+) {
+  final touched = <Pillar, DateTime>{};
+  void touch(Pillar pillar, DateTime? when) {
+    if (when == null) return;
+    final day = _midnight(when);
+    final existing = touched[pillar];
+    if (existing == null || day.isAfter(existing)) touched[pillar] = day;
+  }
+
+  for (final task in tasks) {
+    final pillar = task.pillar;
+    if (pillar == null) continue;
+    touch(pillar, task.completedAt);
+  }
+  for (final workout in workouts) {
+    if (workout.isTemplate) continue;
+    touch(Pillar.training, workout.date);
+  }
+  return touched;
+}
+
+/// Worst gap first. Only pillars switched on in Profile are considered —
+/// an aspirational pillar reporting a forty-day silence every morning is
+/// exactly the noise this is meant to avoid.
+List<PillarNeglect> pillarNeglect({
+  required Set<Pillar> eligible,
+  required List<Task> tasks,
+  required List<Workout> workouts,
+  DateTime? now,
+}) {
+  if (eligible.isEmpty) return const [];
+  final today = _midnight(now ?? DateTime.now());
+  final touched = lastTouchedByPillar(tasks, workouts);
+
+  final out = <PillarNeglect>[
+    for (final pillar in eligible)
+      PillarNeglect(
+        pillar: pillar,
+        days: touched[pillar] == null
+            ? null
+            : today.difference(touched[pillar]!).inDays,
+      ),
+  ];
+
+  out.sort((a, b) {
+    if (a.never != b.never) return a.never ? -1 : 1;
+    if (a.never && b.never) return a.pillar.index.compareTo(b.pillar.index);
+    final c = b.days!.compareTo(a.days!);
+    return c != 0 ? c : a.pillar.index.compareTo(b.pillar.index);
+  });
+  return out;
+}

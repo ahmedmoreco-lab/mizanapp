@@ -31,10 +31,10 @@ class BlockedOperation implements Exception {
 class AppState extends ChangeNotifier {
   AppState({DocumentStore? store}) : _store = store ?? LocalStore() {
     _store.syncStatus.addListener(_notifySyncStatusChanged);
+    _store.syncMessage.addListener(_notifySyncStatusChanged);
   }
 
   final DocumentStore _store;
-  static const _engine = FocusEngine();
   StreamSubscription<Map<String, Object?>>? _storeSubscription;
 
   bool _ready = false;
@@ -43,14 +43,16 @@ class AppState extends ChangeNotifier {
   bool get isCloudBacked => _store.isCloudBacked;
   SyncStatus get syncStatus => _store.syncStatus.value;
 
+  /// Set only when the server refused a write — never for a dropped
+  /// connection, which clears itself.
+  String? get syncMessage => _store.syncMessage.value;
+
   final List<Task> _tasks = [];
   final List<Goal> _goals = [];
   final List<Workout> _workouts = [];
   final List<Exercise> _exercises = [];
 
   AppSettings _settings = AppSettings();
-  DateTime? _focusDate;
-  List<Pillar> _focusPillars = [];
   bool _notionImported = false;
   bool _trainingPlanImported = false;
 
@@ -137,83 +139,72 @@ class AppState extends ChangeNotifier {
   int get completedGoals =>
       _goals.where((g) => g.status == GoalStatus.done).length;
 
-  /// Tasks captured with no pillar and no goal — the quick-add inbox.
-  List<Task> get inbox =>
-      _tasks.where((t) => !t.done && t.isRandom).toList(growable: false);
 
-  // ---------------------------------------------------------- daily focus
+  // -------------------------------------------------------------- agenda
 
-  bool get isFocusConfirmedToday {
-    final d = _focusDate;
-    if (d == null) return false;
-    final now = DateTime.now();
-    return d.year == now.year && d.month == now.month && d.day == now.day;
-  }
-
-  List<Pillar> get focusPillars => List.unmodifiable(_focusPillars);
-
-  List<FocusSuggestion> get suggestions => _engine.suggest(
+  /// Worst pillar gaps first — the one line Home shows in place of the
+  /// pillar cards.
+  List<PillarNeglect> get pillarGaps => pillarNeglect(
         eligible: _settings.suggestingPillars,
         tasks: _tasks,
         workouts: _workouts,
       );
 
-  List<Task> openTasksFor(Pillar p) {
-    final list = _tasks.where((t) => !t.done && t.pillar == p).toList()
+  /// Due today, plus anything already overdue. An overdue task must never
+  /// quietly fall off the only screen you open every day.
+  List<Task> get todayTasks {
+    final list = _tasks
+        .where((t) => !t.done && (t.isDueToday || t.isOverdue))
+        .toList()
       ..sort(_taskOrder);
     return list;
   }
 
-  /// Pinned to today first, then priority, then the nearest due date.
-  /// An undated High still outranks an undated Low.
-  static int _taskOrder(Task a, Task b) {
-    if (a.isTodayFocus != b.isTodayFocus) return a.isTodayFocus ? -1 : 1;
-    final ap = a.priority?.rank ?? 99;
-    final bp = b.priority?.rank ?? 99;
-    if (ap != bp) return ap.compareTo(bp);
-    final ad = a.dueDate;
-    final bd = b.dueDate;
-    if (ad == null && bd == null) return b.createdAt.compareTo(a.createdAt);
-    if (ad == null) return 1;
-    if (bd == null) return -1;
-    return ad.compareTo(bd);
-  }
-
-  List<Task> tasksDoneTodayFor(Pillar p) {
+  /// Finished today, so the day shows what it earned rather than only
+  /// what is left.
+  List<Task> get doneToday {
     final now = DateTime.now();
-    return _tasks
-        .where((t) =>
-            t.done &&
-            t.pillar == p &&
-            t.completedAt != null &&
-            t.completedAt!.year == now.year &&
-            t.completedAt!.month == now.month &&
-            t.completedAt!.day == now.day)
-        .toList();
+    final list = _tasks.where((t) {
+      final at = t.completedAt;
+      return t.done &&
+          at != null &&
+          at.year == now.year &&
+          at.month == now.month &&
+          at.day == now.day;
+    }).toList()
+      ..sort((a, b) => b.completedAt!.compareTo(a.completedAt!));
+    return list;
   }
 
-  Future<void> confirmFocus(List<Pillar> pillars) async {
-    _focusPillars = List.of(pillars);
-    _focusDate = DateTime.now();
-    _settings = _settings.copyWith(lastFocusConfirmedOn: _focusDate);
-    await _persist();
+  /// Captured with no date — the loose pile. Newest first, because the
+  /// thing you wrote down last is the thing you still remember.
+  List<Task> get looseTasks {
+    final list = _tasks
+        .where((t) => !t.done && t.dueDate == null)
+        .toList()
+      ..sort(_taskOrder);
+    return list;
   }
 
-  Future<void> reopenFocus() async {
-    _focusDate = null;
-    await _persist();
+  /// Everything dated to one day, done included, for the calendar.
+  List<Task> tasksOn(DateTime day) {
+    final list = _tasks.where((t) {
+      final due = t.dueDate;
+      return due != null &&
+          due.year == day.year &&
+          due.month == day.month &&
+          due.day == day.day;
+    }).toList()
+      ..sort((a, b) {
+        if (a.done != b.done) return a.done ? 1 : -1;
+        return _taskOrder(a, b);
+      });
+    return list;
   }
 
-  Future<void> addFocusPillar(Pillar p) async {
-    if (_focusPillars.contains(p)) return;
-    _focusPillars.add(p);
-    await _persist();
-  }
-
-  Future<void> removeFocusPillar(Pillar p) async {
-    _focusPillars.remove(p);
-    await _persist();
-  }
+  /// How many open tasks a day carries — the dot under a date.
+  int openCountOn(DateTime day) =>
+      tasksOn(day).where((t) => !t.done).length;
 
   // --------------------------------------------------------------- tasks
 
@@ -648,9 +639,6 @@ class AppState extends ChangeNotifier {
       _settings =
           _settings.copyWith(suggestingPillars: snapshot.suggestingPillars);
     }
-    // Today's focus was chosen against the old, empty data.
-    _focusDate = null;
-    _focusPillars = [];
     _notionImported = true;
 
     await _persist();
@@ -726,8 +714,6 @@ class AppState extends ChangeNotifier {
     _workouts.clear();
     _exercises.clear();
     _settings = AppSettings();
-    _focusDate = null;
-    _focusPillars = [];
     _notionImported = false;
     _trainingPlanImported = false;
     await _store.save(_document());
@@ -787,17 +773,6 @@ class AppState extends ChangeNotifier {
         ? AppSettings.fromJson(Map<String, Object?>.from(s))
         : AppSettings();
 
-    final focus = doc['focus'];
-    if (focus is Map) {
-      final f = Map<String, Object?>.from(focus);
-      _focusDate = f['date'] == null
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(f['date']! as int);
-      _focusPillars = ((f['pillars'] as List?) ?? const [])
-          .cast<String>()
-          .map(PillarX.fromKey)
-          .toList();
-    }
 
     _notionImported = (doc['notion_imported'] as bool?) ?? false;
     _trainingPlanImported = (doc['training_plan_imported'] as bool?) ?? false;
@@ -812,10 +787,6 @@ class AppState extends ChangeNotifier {
         'settings': _settings.toJson(),
         'notion_imported': _notionImported,
         'training_plan_imported': _trainingPlanImported,
-        'focus': {
-          'date': _focusDate?.millisecondsSinceEpoch,
-          'pillars': _focusPillars.map((p) => p.key).toList(),
-        },
       };
 
   Future<void> _persist() async {
@@ -835,6 +806,7 @@ class AppState extends ChangeNotifier {
     final subscription = _storeSubscription;
     if (subscription != null) unawaited(subscription.cancel());
     _store.syncStatus.removeListener(_notifySyncStatusChanged);
+    _store.syncMessage.removeListener(_notifySyncStatusChanged);
     _store.dispose();
     super.dispose();
   }

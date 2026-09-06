@@ -3,12 +3,27 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum SyncStatus { localOnly, syncing, synced, offline }
+enum SyncStatus {
+  localOnly,
+  syncing,
+  synced,
+
+  /// The network is unreachable. Retrying will eventually work.
+  offline,
+
+  /// The server refused the write. Retrying changes nothing until
+  /// something about the data or the rules changes — an oversized
+  /// document being the case worth watching.
+  rejected,
+}
 
 abstract interface class DocumentStore {
   String? get accountEmail;
   bool get isCloudBacked;
   ValueListenable<SyncStatus> get syncStatus;
+
+  /// Why the last write was refused, when it was. Null otherwise.
+  ValueListenable<String?> get syncMessage;
   Stream<Map<String, Object?>> get changes;
 
   Future<Map<String, Object?>> load();
@@ -29,6 +44,7 @@ class LocalStore implements DocumentStore {
   final String _key;
   final ValueNotifier<SyncStatus> _syncStatus =
       ValueNotifier(SyncStatus.localOnly);
+  final ValueNotifier<String?> _syncMessage = ValueNotifier(null);
 
   @override
   String? get accountEmail => null;
@@ -38,6 +54,9 @@ class LocalStore implements DocumentStore {
 
   @override
   ValueListenable<SyncStatus> get syncStatus => _syncStatus;
+
+  @override
+  ValueListenable<String?> get syncMessage => _syncMessage;
 
   @override
   Stream<Map<String, Object?>> get changes => const Stream.empty();
@@ -76,5 +95,8 @@ class LocalStore implements DocumentStore {
       const JsonEncoder.withIndent('  ').convert(document);
 
   @override
-  void dispose() => _syncStatus.dispose();
+  void dispose() {
+    _syncStatus.dispose();
+    _syncMessage.dispose();
+  }
 }

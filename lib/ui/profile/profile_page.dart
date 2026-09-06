@@ -92,12 +92,15 @@ class ProfilePage extends StatelessWidget {
             ),
             _SettingRow(
               title: 'Cloud sync',
-              subtitle: _syncLabel(app.syncStatus),
+              subtitle: app.syncMessage ?? _syncLabel(app.syncStatus),
               trailing: Icon(
                 _syncIcon(app.syncStatus),
                 size: 18,
                 color:
-                    app.syncStatus == SyncStatus.offline ? t.danger : t.faint,
+                    app.syncStatus == SyncStatus.offline ||
+                            app.syncStatus == SyncStatus.rejected
+                        ? t.danger
+                        : t.faint,
               ),
             ),
             _SettingRow(
@@ -266,6 +269,7 @@ class ProfilePage extends StatelessWidget {
         SyncStatus.synced => 'Saved to Firebase',
         SyncStatus.offline => 'Offline - changes remain on this device',
         SyncStatus.localOnly => 'Saved on this device',
+        SyncStatus.rejected => 'Not syncing — saved on this device only',
       };
 
   IconData _syncIcon(SyncStatus status) => switch (status) {
@@ -273,6 +277,7 @@ class ProfilePage extends StatelessWidget {
         SyncStatus.synced => Icons.cloud_done_outlined,
         SyncStatus.offline => Icons.cloud_off_outlined,
         SyncStatus.localOnly => Icons.phone_android_rounded,
+        SyncStatus.rejected => Icons.error_outline_rounded,
       };
 }
 

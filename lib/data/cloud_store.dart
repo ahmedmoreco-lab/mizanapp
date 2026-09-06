@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,8 +37,25 @@ class CloudStore implements DocumentStore {
   final DocumentReference<Map<String, dynamic>> _reference;
   final ValueNotifier<SyncStatus> _syncStatus =
       ValueNotifier(SyncStatus.syncing);
+  final ValueNotifier<String?> _syncMessage = ValueNotifier(null);
 
   static const _networkTimeout = Duration(seconds: 12);
+
+  /// Firestore refuses any document over 1 MiB. Stopping short of that
+  /// leaves room for the envelope and for the write to be explained
+  /// rather than simply rejected.
+  static const _documentSizeLimit = 900 * 1024;
+
+  /// Codes that mean "the connection failed" rather than "the server said
+  /// no". Everything else is a refusal that retrying will not fix.
+  static const _retryableCodes = <String>{
+    'unavailable',
+    'deadline-exceeded',
+    'cancelled',
+    'aborted',
+    'internal',
+    'unknown',
+  };
 
   bool _cloudReady = false;
   bool _disposed = false;
@@ -53,6 +71,9 @@ class CloudStore implements DocumentStore {
 
   @override
   ValueListenable<SyncStatus> get syncStatus => _syncStatus;
+
+  @override
+  ValueListenable<String?> get syncMessage => _syncMessage;
 
   @override
   Stream<Map<String, Object?>> get changes async* {
@@ -147,6 +168,20 @@ class CloudStore implements DocumentStore {
 
   Future<void> _writeCloud(Map<String, Object?> document) async {
     _setStatus(SyncStatus.syncing);
+
+    // Catch the size ceiling before the server does, so it reads as a
+    // real problem with a real number instead of a silent failure to sync.
+    final bytes = utf8.encode(jsonEncode(document)).length;
+    if (bytes > _documentSizeLimit) {
+      _reject(
+        'Your data is ${(bytes / 1024).round()} KB and Firestore caps one '
+        'document at 1024 KB. Everything is still saved on this device, but '
+        'it can no longer sync. Export a copy, then split the training log '
+        'out of the main document.',
+      );
+      return;
+    }
+
     try {
       await _reference.set({
         'schemaVersion': 1,
@@ -155,11 +190,40 @@ class CloudStore implements DocumentStore {
       }).timeout(_networkTimeout);
       await _clearPendingOperation();
       _setStatus(SyncStatus.synced);
-    } on FirebaseException {
-      _setStatus(SyncStatus.offline);
+      _syncMessage.value = null;
+    } on FirebaseException catch (error) {
+      _handleFirebaseError(error, 'save');
     } on TimeoutException {
       _setStatus(SyncStatus.offline);
     }
+  }
+
+  /// A dropped connection and a refused write look the same from the
+  /// outside and are not the same problem: one clears itself, the other
+  /// never will.
+  void _handleFirebaseError(FirebaseException error, String action) {
+    if (_retryableCodes.contains(error.code)) {
+      _setStatus(SyncStatus.offline);
+      return;
+    }
+    _reject(switch (error.code) {
+      'permission-denied' =>
+        'Firestore refused the $action. Check that the security rules are '
+            'deployed and that you are signed in to the right account.',
+      'resource-exhausted' =>
+        'Firebase quota reached, so the $action was refused. It should '
+            'resolve when the quota resets.',
+      'invalid-argument' =>
+        'Firestore rejected the $action as invalid — most likely the '
+            'document has grown past its 1 MB limit.',
+      _ => 'Firestore refused the $action (${error.code}). '
+          'Your data is still saved on this device.',
+    });
+  }
+
+  void _reject(String message) {
+    _syncMessage.value = message;
+    _setStatus(SyncStatus.rejected);
   }
 
   @override
@@ -205,8 +269,9 @@ class CloudStore implements DocumentStore {
       await _reference.delete().timeout(_networkTimeout);
       await _clearPendingOperation();
       _setStatus(SyncStatus.synced);
-    } on FirebaseException {
-      _setStatus(SyncStatus.offline);
+      _syncMessage.value = null;
+    } on FirebaseException catch (error) {
+      _handleFirebaseError(error, 'delete');
     } on TimeoutException {
       _setStatus(SyncStatus.offline);
     }
@@ -230,9 +295,9 @@ class CloudStore implements DocumentStore {
   }
 
   void _setStatus(SyncStatus status) {
-    if (!_disposed && _syncStatus.value != status) {
-      _syncStatus.value = status;
-    }
+    if (_disposed) return;
+    if (status != SyncStatus.rejected) _syncMessage.value = null;
+    if (_syncStatus.value != status) _syncStatus.value = status;
   }
 
   @override
@@ -241,5 +306,6 @@ class CloudStore implements DocumentStore {
     _local.dispose();
     _legacy.dispose();
     _syncStatus.dispose();
+    _syncMessage.dispose();
   }
 }

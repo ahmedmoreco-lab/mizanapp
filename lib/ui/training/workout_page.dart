@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -427,8 +429,43 @@ class _NotesField extends StatefulWidget {
 class _NotesFieldState extends State<_NotesField> {
   late final _controller = TextEditingController(text: widget.workout.notes);
 
+  /// Persisting on every keystroke rewrites the whole document — cheap
+  /// against a local file, wasteful once it goes to Firestore on every
+  /// character. Save shortly after typing stops, and on the way out.
+  static const _debounce = Duration(milliseconds: 900);
+  Timer? _timer;
+  AppState? _app;
+  String? _unsaved;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _app = context.read<AppState>();
+  }
+
+  void _queue(String value) {
+    _unsaved = value;
+    _timer?.cancel();
+    _timer = Timer(_debounce, _flush);
+  }
+
+  void _flush() {
+    _timer?.cancel();
+    _timer = null;
+    final pending = _unsaved;
+    final app = _app;
+    if (pending == null || app == null) return;
+    _unsaved = null;
+    // Re-read the workout: sets may have changed while the note was typed.
+    final current = app.workoutById(widget.workout.id);
+    if (current == null || current.notes == pending) return;
+    app.saveWorkout(current.copyWith(notes: pending));
+  }
+
   @override
   void dispose() {
+    _flush();
+    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -443,9 +480,11 @@ class _NotesFieldState extends State<_NotesField> {
       style: AppType.body.copyWith(color: t.ink),
       decoration: const InputDecoration(
           hintText: 'Anything the fields don\'t catch…'),
-      onChanged: (v) => context
-          .read<AppState>()
-          .saveWorkout(widget.workout.copyWith(notes: v)),
+      onChanged: _queue,
+      onTapOutside: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        _flush();
+      },
     );
   }
 }

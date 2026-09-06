@@ -2,181 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../logic/focus_engine.dart';
 import '../../models/enums.dart';
 import '../../models/pillar.dart';
 import '../../models/task.dart';
 import '../../state/app_state.dart';
 import '../../theme/tokens.dart';
+import '../calendar/calendar_page.dart';
 import '../tasks/task_editor_sheet.dart';
 import '../widgets/common.dart';
 
+/// Home is an agenda, not a dashboard: what is due today, and what is
+/// still floating. The pillar cards that used to live here said very
+/// little per pixel; what they were good for survives as one line.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    return app.isFocusConfirmedToday
-        ? const _TodayView()
-        : const _SuggestView();
-  }
-}
-
-String _todayLabel() => DateFormat('EEEE, d MMMM').format(DateTime.now());
-
-// ---------------------------------------------------------------- suggest
-
-class _SuggestView extends StatefulWidget {
-  const _SuggestView();
-
-  @override
-  State<_SuggestView> createState() => _SuggestViewState();
-}
-
-class _SuggestViewState extends State<_SuggestView> {
-  /// Pillars the user has dropped from today's set. Held locally so
-  /// nothing is written until Confirm — the suggestion is never auto-locked.
-  final Set<Pillar> _dropped = {};
-  final List<Pillar> _added = [];
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
     final t = context.t;
 
-    final suggestions = app.suggestions
-        .where((s) => !_dropped.contains(s.pillar))
-        .toList();
-    final chosen = <Pillar>[
-      ...suggestions.map((s) => s.pillar),
-      ..._added,
-    ];
-
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(Sp.x20, Sp.x6, Sp.x20, Sp.x8),
-            children: [
-              ScreenTitle(
-                'Today',
-                eyebrow: _todayLabel(),
-                subtitle: suggestions.isEmpty && _added.isEmpty
-                    ? 'Nothing is asking for attention yet. Add a pillar, or just capture something.'
-                    : 'These pillars look like they want your attention. Drop any that don\'t fit.',
-              ),
-              const SectionLabel('Suggested focus'),
-              for (final s in suggestions)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Sp.x10),
-                  child: _SuggestCard(
-                    pillar: s.pillar,
-                    reason: s.reason,
-                    onRemove: () => setState(() => _dropped.add(s.pillar)),
-                  ),
-                ),
-              for (final p in _added)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Sp.x10),
-                  child: _SuggestCard(
-                    pillar: p,
-                    reason: 'Added by you',
-                    onRemove: () => setState(() => _added.remove(p)),
-                  ),
-                ),
-              GhostButton(
-                'Add a pillar',
-                icon: Icons.add_rounded,
-                onPressed: () => _pickPillar(context, chosen),
-              ),
-              const SizedBox(height: Sp.x8),
-            ],
-          ),
-        ),
-        Dock(
-          child: PrimaryButton(
-            chosen.isEmpty ? 'Start with nothing set' : 'Confirm today\'s focus',
-            onPressed: () => context.read<AppState>().confirmFocus(chosen),
-          ),
-        ),
-      ],
-    ).withBackground(t.bg);
-  }
-
-  Future<void> _pickPillar(BuildContext context, List<Pillar> already) async {
-    final picked = await showPillarPicker(context, exclude: already.toSet());
-    if (picked != null && mounted) {
-      setState(() {
-        _dropped.remove(picked);
-        if (!_added.contains(picked)) _added.add(picked);
-      });
-    }
-  }
-}
-
-class _SuggestCard extends StatelessWidget {
-  const _SuggestCard({
-    required this.pillar,
-    required this.reason,
-    required this.onRemove,
-  });
-
-  final Pillar pillar;
-  final String reason;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.t;
-    return AppCard(
-      child: Row(
-        children: [
-          PillarBadge(pillar),
-          const SizedBox(width: Sp.x10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(pillar.label,
-                    style: manrope(size: 15.5, weight: 700, color: t.ink)),
-                const SizedBox(height: 1),
-                Text(reason, style: AppType.meta.copyWith(color: t.muted)),
-              ],
-            ),
-          ),
-          // Deliberately a smaller target than Confirm: dropping a pillar
-          // should be possible, not accidental.
-          IconButton(
-            onPressed: onRemove,
-            icon: Icon(Icons.close_rounded, size: 16, color: t.faint),
-            splashRadius: 18,
-            constraints: const BoxConstraints.tightFor(width: 30, height: 30),
-            padding: EdgeInsets.zero,
-            tooltip: 'Drop ${pillar.label}',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ------------------------------------------------------------------ today
-
-class _TodayView extends StatelessWidget {
-  const _TodayView();
-
-  @override
-  Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final t = context.t;
-    final pillars = app.focusPillars;
-
-    var done = 0;
-    var total = 0;
-    for (final p in pillars) {
-      done += app.tasksDoneTodayFor(p).length;
-      total += app.tasksDoneTodayFor(p).length + app.openTasksFor(p).length;
-    }
+    final today = app.todayTasks;
+    final done = app.doneToday;
+    final loose = app.looseTasks;
+    final total = today.length + done.length;
 
     return Column(
       children: [
@@ -187,56 +37,79 @@ class _TodayView extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: ScreenTitle('Today', eyebrow: _todayLabel())),
-                  TextButton(
-                    onPressed: () => context.read<AppState>().reopenFocus(),
-                    child: Text('Adjust',
-                        style: manrope(size: 13, weight: 700, color: t.muted)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Sp.x14),
-              Row(
-                children: [
                   Expanded(
-                    child: ThinBar(
-                      value: total == 0 ? 0 : done / total,
-                      color: t.ink,
+                    child: ScreenTitle(
+                      'Today',
+                      eyebrow: DateFormat('EEEE, d MMMM').format(DateTime.now()),
                     ),
                   ),
-                  const SizedBox(width: Sp.x14),
-                  Text('$done / $total',
-                      style: manrope(
-                          size: 12.5, weight: 700, color: t.ink, tabular: true)),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CalendarPage(),
+                      ),
+                    ),
+                    icon: Icon(Icons.calendar_today_outlined,
+                        size: 20, color: t.muted),
+                    tooltip: 'Calendar',
+                  ),
                 ],
               ),
-              if (pillars.isEmpty) ...[
-                const SectionLabel('Focus'),
-                const EmptyState(
-                  title: 'No pillars set for today',
-                  message:
-                      'Tap Adjust to pick a few, or just capture things below and file them later.',
+
+              if (total > 0) ...[
+                const SizedBox(height: Sp.x10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ThinBar(value: done.length / total, color: t.ink),
+                    ),
+                    const SizedBox(width: Sp.x14),
+                    Text('${done.length} / $total',
+                        style: manrope(
+                            size: 12.5,
+                            weight: 700,
+                            color: t.ink,
+                            tabular: true)),
+                  ],
                 ),
-              ] else ...[
-                const SectionLabel('Focus'),
-                for (final p in pillars)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Sp.x10),
-                    child: _FocusCard(pillar: p),
-                  ),
               ],
-              if (app.inbox.isNotEmpty) ...[
-                const SectionLabel('Inbox'),
+
+              const _GapsLine(),
+
+              const SectionLabel('Today'),
+              if (today.isEmpty && done.isEmpty)
+                const EmptyState(
+                  title: 'Nothing due today',
+                  message:
+                      'Give something below a date, or just capture what comes up.',
+                  height: 120,
+                )
+              else
                 AppCard(
                   padding: const EdgeInsets.symmetric(horizontal: Sp.x14),
                   child: Column(
                     children: [
-                      for (final task in app.inbox.take(5))
-                        _TaskRow(task: task, color: t.muted),
+                      for (final task in today) TaskLine(task: task),
+                      for (final task in done) TaskLine(task: task),
                     ],
                   ),
                 ),
-              ],
+
+              const SectionLabel('Anything else'),
+              if (loose.isEmpty)
+                AppCard(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: Sp.x20, vertical: Sp.x20),
+                  child: Center(
+                    child: Text(
+                      'Nothing loose. Type below and it lands here.',
+                      textAlign: TextAlign.center,
+                      style: AppType.meta.copyWith(color: t.muted),
+                    ),
+                  ),
+                )
+              else
+                _LooseList(tasks: loose),
               const SizedBox(height: Sp.x8),
             ],
           ),
@@ -252,179 +125,229 @@ class _TodayView extends StatelessWidget {
   }
 }
 
-class _FocusCard extends StatelessWidget {
-  const _FocusCard({required this.pillar});
+/// Everything the four pillar cards used to say, in one muted line —
+/// and only when there is something to say.
+class _GapsLine extends StatefulWidget {
+  const _GapsLine();
 
-  final Pillar pillar;
+  @override
+  State<_GapsLine> createState() => _GapsLineState();
+}
+
+class _GapsLineState extends State<_GapsLine> {
+  bool _open = false;
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final t = context.t;
-    final color = t.pillar(pillar);
+    final gaps = app.pillarGaps;
 
-    final open = app.openTasksFor(pillar);
-    final doneToday = app.tasksDoneTodayFor(pillar);
-    final total = open.length + doneToday.length;
+    // A pillar touched yesterday is not neglected. Staying quiet is the
+    // point: a line that appears every single day stops being read.
+    final stale =
+        gaps.where((g) => g.never || (g.days ?? 0) >= 2).toList();
+    if (stale.isEmpty) return const SizedBox.shrink();
 
-    // Progressive disclosure: two tasks, then a count. Home is not a backlog.
-    final shown = <Task>[...doneToday.take(1), ...open.take(2)];
-    final hidden = total - shown.length;
+    String label(PillarNeglect g) =>
+        g.never ? '${g.pillar.label} never' : '${g.pillar.label} ${g.days}d';
 
-    return AppCard(
+    return Padding(
+      padding: const EdgeInsets.only(top: Sp.x14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              PillarBadge(pillar),
-              const SizedBox(width: Sp.x10),
-              Expanded(
-                child: Text(pillar.label,
-                    style: manrope(size: 15.5, weight: 700, color: t.ink)),
-              ),
-              Text('${doneToday.length}/$total',
-                  style: manrope(
-                      size: 12.5, weight: 700, color: t.muted, tabular: true)),
-            ],
-          ),
-          if (total == 0)
-            Padding(
-              padding: const EdgeInsets.only(top: Sp.x8),
-              child: Text('No task yet — capture one below',
-                  style: AppType.meta.copyWith(color: t.muted)),
-            )
-          else ...[
-            const SizedBox(height: Sp.x10),
-            ThinBar(value: doneToday.length / total, color: color),
-            const SizedBox(height: Sp.x4),
-            for (final task in shown) _TaskRow(task: task, color: color),
-            if (hidden > 0)
-              Padding(
-                padding: const EdgeInsets.only(left: 29, top: Sp.x4),
-                child: Text('+$hidden more',
-                    style: AppType.meta.copyWith(color: t.muted)),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _TaskRow extends StatelessWidget {
-  const _TaskRow({required this.task, required this.color});
-
-  final Task task;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.t;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        children: [
-          TaskCheck(
-            done: task.done,
-            color: color,
-            onTap: () => context.read<AppState>().toggleTask(task.id),
-          ),
-          const SizedBox(width: Sp.x10),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => showTaskEditor(context, task),
-              behavior: HitTestBehavior.opaque,
-              child: Text(
-                task.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppType.body.copyWith(
-                  color: task.done ? t.faint : t.ink,
-                  decoration: task.done ? TextDecoration.lineThrough : null,
-                  decorationColor: t.faint,
-                ),
-              ),
-            ),
-          ),
-          // Only High is shown. Medium and Low still sort, but a label on
-          // every row would be noise on the screen meant to stay sparse.
-          if (task.priority == Priority.high && !task.done)
-            const Padding(
-              padding: EdgeInsets.only(left: Sp.x8),
-              child: TintPill('High'),
-            ),
-          if (task.isOverdue && !task.done)
-            Padding(
-              padding: const EdgeInsets.only(left: Sp.x8),
-              child: TintPill('Overdue', color: t.danger),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// --------------------------------------------------------------- pillar picker
-
-Future<Pillar?> showPillarPicker(
-  BuildContext context, {
-  Set<Pillar> exclude = const {},
-  String title = 'Pick a pillar',
-}) {
-  final t = context.t;
-  final options =
-      Pillar.values.where((p) => !exclude.contains(p)).toList();
-  return showModalBottomSheet<Pillar>(
-    context: context,
-    backgroundColor: t.sheet,
-    builder: (context) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(Sp.x20, Sp.x10, Sp.x20, Sp.x20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SheetGrabber(),
-            Text(title,
-                style: AppType.subScreenTitle.copyWith(color: t.ink, fontSize: 18)),
-            const SizedBox(height: Sp.x14),
-            if (options.isEmpty)
-              Text('Every pillar is already in today\'s set.',
-                  style: AppType.body.copyWith(color: t.muted))
-            else
-              Wrap(
-                spacing: Sp.x8,
-                runSpacing: Sp.x8,
+          InkWell(
+            onTap: () => setState(() => _open = !_open),
+            borderRadius: BorderRadius.circular(Rad.chip),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: Sp.x4),
+              child: Row(
                 children: [
-                  for (final p in options)
-                    InkWell(
-                      onTap: () => Navigator.of(context).pop(p),
-                      borderRadius: BorderRadius.circular(Rad.chip),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: Sp.x10, vertical: Sp.x8),
-                        decoration: BoxDecoration(
-                          color: t.pillarTint(p),
-                          borderRadius: BorderRadius.circular(Rad.chip),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(pillarIcon(p),
-                                size: 15, color: t.pillar(p)),
-                            const SizedBox(width: Sp.x6),
-                            Text(p.label,
-                                style: AppType.chip.copyWith(color: t.pillar(p))),
-                          ],
-                        ),
+                  Icon(Icons.schedule_rounded, size: 13, color: t.faint),
+                  const SizedBox(width: Sp.x6),
+                  Expanded(
+                    child: Text(
+                      'Untouched · ${stale.take(2).map(label).join(' · ')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.meta.copyWith(color: t.muted),
+                    ),
+                  ),
+                  Icon(
+                    _open
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 16,
+                    color: t.faint,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_open)
+            Padding(
+              padding: const EdgeInsets.only(top: Sp.x6, left: 19),
+              child: Column(
+                children: [
+                  for (final gap in gaps)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        children: [
+                          PillarDot(gap.pillar, size: 6),
+                          const SizedBox(width: Sp.x8),
+                          Expanded(
+                            child: Text(gap.pillar.label,
+                                style: AppType.meta.copyWith(color: t.muted)),
+                          ),
+                          Text(
+                            gap.never ? 'never' : '${gap.days}d',
+                            style: manrope(
+                                size: 12,
+                                weight: 600,
+                                color: t.faint,
+                                tabular: true),
+                          ),
+                        ],
                       ),
                     ),
                 ],
               ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LooseList extends StatefulWidget {
+  const _LooseList({required this.tasks});
+
+  final List<Task> tasks;
+
+  @override
+  State<_LooseList> createState() => _LooseListState();
+}
+
+class _LooseListState extends State<_LooseList> {
+  static const _collapsed = 6;
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown =
+        _all ? widget.tasks : widget.tasks.take(_collapsed).toList();
+    final hidden = widget.tasks.length - shown.length;
+
+    return Column(
+      children: [
+        AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: Sp.x14),
+          child: Column(
+            children: [for (final task in shown) TaskLine(task: task)],
+          ),
+        ),
+        if (hidden > 0 || _all)
+          Padding(
+            padding: const EdgeInsets.only(top: Sp.x8),
+            child: GhostButton(
+              _all ? 'Show fewer' : 'Show all ${widget.tasks.length}',
+              bordered: false,
+              onPressed: () => setState(() => _all = !_all),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// One task, anywhere. A filled dot carries the pillar colour; an unfiled
+/// task gets a hollow ring, because no colour is what "not filed" looks
+/// like in a system where colour means pillar.
+class TaskLine extends StatelessWidget {
+  const TaskLine({super.key, required this.task, this.showDate = false});
+
+  final Task task;
+  final bool showDate;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.t;
+    final pillar = task.pillar;
+    final color = pillar == null ? t.faint : t.pillar(pillar);
+
+    return Dismissible(
+      key: ValueKey(task.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => context.read<AppState>().deleteTask(task.id),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: Sp.x8),
+        color: t.danger,
+        child: Text('Delete',
+            style: manrope(size: 12, weight: 700, color: t.dangerInk)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            TaskCheck(
+              done: task.done,
+              color: pillar == null ? t.ink : color,
+              onTap: () => context.read<AppState>().toggleTask(task.id),
+            ),
+            const SizedBox(width: Sp.x10),
+            if (pillar == null)
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: t.faint, width: 1.4),
+                ),
+              )
+            else
+              PillarDot(pillar),
+            const SizedBox(width: Sp.x10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => showTaskEditor(context, task),
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppType.body.copyWith(
+                    color: task.done ? t.faint : t.ink,
+                    decoration: task.done ? TextDecoration.lineThrough : null,
+                    decorationColor: t.faint,
+                  ),
+                ),
+              ),
+            ),
+            if (!task.done && task.priority == Priority.high)
+              const Padding(
+                padding: EdgeInsets.only(left: Sp.x8),
+                child: TintPill('High'),
+              ),
+            if (!task.done && task.isOverdue)
+              Padding(
+                padding: const EdgeInsets.only(left: Sp.x8),
+                child: TintPill('Overdue', color: t.danger),
+              ),
+            if (showDate && !task.isOverdue && task.dueDate != null)
+              Padding(
+                padding: const EdgeInsets.only(left: Sp.x8),
+                child: Text(
+                  DateFormat('d MMM').format(task.dueDate!),
+                  style: manrope(
+                      size: 11.5, weight: 600, color: t.faint, tabular: true),
+                ),
+              ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }

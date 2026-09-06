@@ -132,6 +132,60 @@ void main() {
     });
   });
 
+  group('pillar gaps', () {
+    test('the worst gap comes first and never-touched leads', () {
+      final gaps = pillarNeglect(
+        eligible: {Pillar.work, Pillar.faith, Pillar.family},
+        tasks: [
+          task(
+            title: 'w',
+            pillar: Pillar.work,
+            done: true,
+            completedAt: daysAgo(1),
+          ),
+          task(
+            title: 'f',
+            pillar: Pillar.family,
+            done: true,
+            completedAt: daysAgo(6),
+          ),
+        ],
+        workouts: const [],
+      );
+      expect(gaps.first.pillar, Pillar.faith);
+      expect(gaps.first.never, isTrue);
+      expect(gaps[1].pillar, Pillar.family);
+      expect(gaps[1].days, 6);
+      expect(gaps.last.pillar, Pillar.work);
+      expect(gaps.last.days, 1);
+    });
+
+    test('a pillar switched off in settings is not reported', () {
+      final gaps = pillarNeglect(
+        eligible: {Pillar.work},
+        tasks: const [],
+        workouts: const [],
+      );
+      expect(gaps.map((g) => g.pillar), [Pillar.work]);
+    });
+
+    test('a logged workout counts as touching Training', () {
+      final gaps = pillarNeglect(
+        eligible: {Pillar.training},
+        tasks: const [],
+        workouts: [
+          strengthWorkout(
+            id: 'w',
+            date: daysAgo(2),
+            exerciseId: 'squat',
+            weights: const [100],
+          ),
+        ],
+      );
+      expect(gaps.single.days, 2);
+    });
+  });
+
   group('training stats', () {
     test('counts consecutive days ending today', () {
       final stats = computeTrainingStats([
